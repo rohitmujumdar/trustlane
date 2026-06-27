@@ -1,0 +1,15 @@
+[project]
+name = "trustlane"
+version = "0.1.0"
+description = "Agent identity + fraud layer for booking platforms. Trust verdict gates runtime 1Password credential release."
+requires-python = ">=3.9"
+dependencies = []
+
+[project.optional-dependencies]
+onepassword = ["onepassword-sdk>=0.1.0"]
+dev = ["pytest>=7.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# flat module layout: tests import top-level modules directly
+pythonpath = ["."]
