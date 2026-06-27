@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>TrustLane · two-lane console</title>
+<style>
+  :root {
+    --bg: #0b0f17; --panel: #121826; --line: #1f2937; --muted: #8b97a8;
+    --text: #e6edf6; --green: #16c784; --green-bg: #0e2a20; --red: #ff5470;
+    --red-bg: #2a1019; --amber: #f5a623; --accent: #5b8cff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.5 -apple-system, Segoe UI, Roboto, sans-serif;
+  }
+  header {
+    padding: 18px 24px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  header h1 { margin: 0; font-size: 18px; letter-spacing: .3px; }
+  header .sub { color: var(--muted); font-size: 12px; }
+  .controls { display: flex; gap: 8px; flex-wrap: wrap; }
+  button {
+    background: var(--panel); color: var(--text); border: 1px solid var(--line);
+    padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 13px;
+  }
+  button:hover { border-color: var(--accent); }
+  button.reset { color: var(--muted); }
+  .lanes { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px 24px; }
+  .lane { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; min-height: 60vh; }
+  .lane h2 { margin: 0; padding: 14px 16px; border-bottom: 1px solid var(--line); font-size: 14px; }
+  .lane h2 small { color: var(--muted); font-weight: 400; }
+  .stream { padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .ev { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  .ev .t { font-weight: 600; }
+  .ev .d { color: var(--muted); font-size: 12.5px; }
+  .ev.identity { border-color: var(--accent); }
+  .ev.credential, .ev.booking { border-color: var(--green); background: var(--green-bg); }
+  .ev.blocked { border-color: var(--red); background: var(--red-bg); }
+  .score { display: flex; align-items: center; gap: 12px; }
+  .gauge { font-size: 22px; font-weight: 700; min-width: 54px; text-align: center;
+           border-radius: 8px; padding: 6px 4px; }
+  .gauge.allow { color: var(--green); background: var(--green-bg); }
+  .gauge.review { color: var(--amber); }
+  .gauge.block { color: var(--red); background: var(--red-bg); }
+  .signals { margin-top: 8px; display: flex; flex-direction: column; gap: 3px; font-size: 12px; }
+  .sig { display: flex; gap: 8px; }
+  .sig .ok { color: var(--green); } .sig .no { color: var(--red); }
+  .sig .nm { color: var(--text); min-width: 140px; }
+  .sig .dt { color: var(--muted); }
+  .empty { color: var(--muted); padding: 24px 16px; font-size: 13px; }
+</style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>TrustLane</h1>
+      <div class="sub">agent identity + fraud layer · same engine, two surfaces</div>
+    </div>
+    <div class="controls">
+      <button onclick="run('1')">▶ Scenario 1 · inbound clean</button>
+      <button onclick="run('2')">▶ Scenario 2 · outbound injection</button>
+      <button onclick="run('3')">▶ Scenario 3 · inbound fraud</button>
+      <button class="reset" onclick="reset()">⟲ reset</button>
+    </div>
+  </header>
+
+  <div class="lanes">
+    <section class="lane">
+      <h2>Inbound · External Agents <small>— personal agents arriving to book</small></h2>
+      <div class="stream" id="inbound"><div class="empty">Fire a scenario to begin.</div></div>
+    </section>
+    <section class="lane">
+      <h2>Outbound · Expedia's Own Agent <small>— first-party agent acting for users</small></h2>
+      <div class="stream" id="outbound"><div class="empty">Fire a scenario to begin.</div></div>
+    </section>
+  </div>
+
+<script>
+async function run(key) { await fetch('/api/run/' + key, {method: 'POST'}); }
+async function reset() { await fetch('/api/reset', {method: 'POST'}); render([]); }
+
+function band(decision) {
+  return decision === 'ALLOW' ? 'allow' : decision === 'REVIEW' ? 'review' : 'block';
+}
+
+function evNode(ev) {
+  const el = document.createElement('div');
+  el.className = 'ev ' + ev.type;
+  if (ev.type === 'score') {
+    const d = ev.data || {};
+    const sigs = (d.signals || []).map(s =>
+      `<div class="sig"><span class="${s.passed ? 'ok' : 'no'}">${s.passed ? '✓' : '✗'}</span>`
+      + `<span class="nm">${s.name}</span><span class="dt">${s.detail}</span></div>`).join('');
+    el.innerHTML =
+      `<div class="score"><div class="gauge ${band(d.decision)}">${d.score}</div>`
+      + `<div><div class="t">${ev.title}</div><div class="d">${ev.detail || ''}</div></div></div>`
+      + `<div class="signals">${sigs}</div>`;
+  } else {
+    el.innerHTML = `<div class="t">${ev.title}</div><div class="d">${ev.detail || ''}</div>`;
+  }
+  return el;
+}
+
+function render(events) {
+  for (const laneId of ['inbound', 'outbound']) {
+    const lane = events.filter(e => e.lane === laneId);
+    const box = document.getElementById(laneId);
+    box.innerHTML = '';
+    if (!lane.length) { box.innerHTML = '<div class="empty">Fire a scenario to begin.</div>'; continue; }
+    lane.forEach(ev => box.appendChild(evNode(ev)));
+  }
+}
+
+async function poll() {
+  try {
+    const r = await fetch('/api/state');
+    const { events } = await r.json();
+    render(events);
+  } catch (e) { /* server not up yet */ }
+}
+setInterval(poll, 500);
+poll();
+</script>
+</body>
+</html>

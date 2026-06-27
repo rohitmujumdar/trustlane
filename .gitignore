@@ -14,9 +14,6 @@ venv/
 *.env
 !.env.example
 
-# Audit log output
-audit.log.jsonl
-
 # OS / editor
 .DS_Store
 .vscode/

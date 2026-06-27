@@ -1,6 +1,6 @@
-# The demo runs on the Python standard library alone — no install needed.
+# demo.py and server.py run on the Python standard library alone — no install
+# needed to see the two-lane console work end to end.
 #
-# Uncomment to wire the real 1Password vault and dev tooling:
+# Uncomment to wire the real 1Password vault + dev tooling:
 # onepassword-sdk>=0.1.0
-# python-dotenv>=1.0
 # pytest>=7.0

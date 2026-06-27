@@ -1,22 +1,15 @@
-[build-system]
-requires = ["setuptools>=68"]
-build-backend = "setuptools.build_meta"
-
 [project]
-name = "trustgate"  # placeholder — rename when you pick a real name
+name = "trustlane"
 version = "0.1.0"
-description = "Real-time trust scoring that gates runtime credential release for agents."
-requires-python = ">=3.10"
+description = "Agent identity + fraud layer for booking platforms. Trust verdict gates runtime 1Password credential release."
+requires-python = ">=3.9"
 dependencies = []
 
 [project.optional-dependencies]
-# Wire the real 1Password vault.
 onepassword = ["onepassword-sdk>=0.1.0"]
-# Local dev.
-dev = ["pytest>=7.0", "python-dotenv>=1.0"]
-
-[tool.setuptools.packages.find]
-include = ["trustgate*"]
+dev = ["pytest>=7.0"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# flat module layout: tests import top-level modules directly
+pythonpath = ["."]
