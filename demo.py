@@ -8,9 +8,11 @@ and the core claim holds: the payment secret resolves ONLY on ALLOW and never
 appears anywhere the console (or the agent) can read it.
 """
 import json
+import os
 
 from agent_loop import run_scenario
 from credential_gate import CredentialGate
+from dotenv_lite import load_env
 from events import EventBus
 from scenarios import all_scenarios
 from trust_engine import score
@@ -31,7 +33,9 @@ def _print_events(events: list[dict]) -> None:
 
 
 def main() -> None:
-    gate = CredentialGate()  # mock vault unless OP_SERVICE_ACCOUNT_TOKEN is set
+    load_env()  # pick up OP_SERVICE_ACCOUNT_TOKEN / TRUSTLANE_SECRET_REF from .env
+    ref = os.environ.get("TRUSTLANE_SECRET_REF", "op://TrustLane/ExpediaPayment/credential")
+    gate = CredentialGate(secret_ref=ref)  # mock vault unless a token is set
     print(f"1Password gate: {'LIVE vault' if gate.live else 'mock vault (no token)'}\n")
 
     # The raw secret an ALLOW would resolve — we will prove it never leaks.
