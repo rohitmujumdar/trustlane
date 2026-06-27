@@ -4,6 +4,17 @@ Every step of a scenario appends an event tagged with its lane ("inbound" or
 "outbound"). The console polls snapshot() and renders identity -> score+signals
 -> credential lifecycle per lane. Thread-safe so the stdlib HTTP server can append
 from request threads while the console polls.
+
+Event types:
+  "identity"   — agent identity declaration at scenario start
+  "score"      — trust engine verdict with full signal breakdown
+  "credential" — scoped credential issued or revoked
+  "booking"    — booking confirmed after ALLOW
+  "blocked"    — action blocked (BLOCK or REVIEW decision)
+  "note"       — general informational message
+  "reasoning"  — cached LLM thought string for the current step
+  "agent_start"— when a sub-agent begins its task (multi-agent architecture)
+  "reputation" — reputation update after an action completes
 """
 from __future__ import annotations
 

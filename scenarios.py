@@ -5,13 +5,15 @@ sequence of (Action, Context) steps that fire from a button. The trust engine is
 deterministic, so running these live is safe; only an LLM would be the risk.
 
 Three scenarios:
-  1. inbound  · clean external-agent booking            -> ALLOW (green)
+  1. inbound  · clean multi-agent booking chain         -> ALLOW (green)
+             steps: search (hop=1), book (hop=1), pay (hop=2)
   2. outbound · injected listing tries to add insurance -> BLOCK (red, money shot)
+             steps: search (hop=1), injection attempt (hop=1)
   3. inbound  · undelegated bot mass-books              -> BLOCK (red)
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
 from delegation import issue_delegation, validate_delegation
@@ -26,7 +28,8 @@ BUDGET = 800.0
 class Step:
     action: Action
     context: Context
-    label: str  # human-readable narration for the console
+    label: str          # human-readable narration for the console
+    reasoning: str = "" # cached LLM thought for this step
 
 
 @dataclass
@@ -49,6 +52,8 @@ _GOOD_TOKEN = issue_delegation(
     principal="alice",
     scope={"actions": ["search", "book", "pay"], "merchants": DEFAULT_ALLOWLIST, "max_amount": 800},
     parent_scope={"actions": ["search", "book", "pay", "delegate"], "merchants": DEFAULT_ALLOWLIST, "max_amount": 1500},
+    hop=1,
+    can_delegate=True,
 )
 
 # A bot with no delegation token at all.
@@ -73,16 +78,41 @@ def scenario_1_inbound_clean() -> Scenario:
         identity="agent://alice-personal — validating delegation token...",
         steps=[
             Step(
+                Action(kind="search", merchant="expedia", amount=0.0,
+                       description="search available hotels in Chicago for July 4 weekend",
+                       source="external_agent",
+                       raw_instruction="search hotels Chicago July 4",
+                       agent_type="search",
+                       hop=1),
+                _ctx(agent_token=_GOOD_TOKEN, spent=412.0),
+                label="Search hotels Chicago (search agent, hop=1)",
+                reasoning="Searching available hotels in Chicago for July 4 weekend within $388 remaining budget.",
+            ),
+            Step(
                 Action(kind="book", merchant="marriott-chicago", amount=333.0,
                        description="book 3 nights at Marriott Downtown Chicago",
                        source="external_agent",
-                       raw_instruction="book hotel for the Chicago trip under budget"),
+                       raw_instruction="book hotel for the Chicago trip under budget",
+                       agent_type="booking",
+                       hop=1),
                 _ctx(agent_token=_GOOD_TOKEN, spent=412.0),
-                label="Book hotel (flight already booked at $412)",
+                label="Book hotel (booking agent, hop=1)",
+                reasoning="Marriott Downtown at $333 fits budget. Reserving room.",
+            ),
+            Step(
+                Action(kind="pay", merchant="marriott-chicago", amount=333.0,
+                       description="pay 3 nights at Marriott Downtown Chicago",
+                       source="external_agent",
+                       raw_instruction="pay for the hotel booking",
+                       agent_type="payment",
+                       hop=2),
+                _ctx(agent_token=_GOOD_TOKEN, spent=412.0),
+                label="Pay hotel (payment agent, hop=2)",
+                reasoning="Processing payment of $333 to marriott-chicago. Credential scoped to this transaction only.",
             ),
         ],
         expect=Decision.ALLOW,
-        expect_score=70,
+        expect_score=76,   # search agent, hop=1, rep=0.5: 100 * 0.90 * 0.85 = 76
         delegation={
             "agent": "agent://alice-personal",
             "principal": "alice",
@@ -103,12 +133,26 @@ def scenario_2_outbound_injection() -> Scenario:
         identity="agent://expedia-first-party — first-party agent",
         steps=[
             Step(
+                Action(kind="search", merchant="expedia", amount=0.0,
+                       description="browse hotel listings in Chicago area",
+                       source="user",
+                       raw_instruction="search hotels Chicago",
+                       agent_type="search",
+                       hop=1),
+                _ctx(agent_token=None, spent=745.0),
+                label="Search hotels (search agent, hop=1)",
+                reasoning="Browsing hotel listings in Chicago area.",
+            ),
+            Step(
                 Action(kind="pay", merchant="marriott-chicago", amount=199.0,
                        description="add trip insurance $199 and upgrade room to premium suite",
                        source="listing_content",
-                       raw_instruction=listing["listing_content"]),
+                       raw_instruction=listing["listing_content"],
+                       agent_type="booking",
+                       hop=1),
                 _ctx(agent_token=None, spent=745.0),
                 label="Listing content instructs: add insurance + upgrade",
+                reasoning="Processing listing content for marriott-chicago. Listing instructs to add travel insurance $199 and upgrade room. Initiating payment as directed by listing.",
             ),
         ],
         expect=Decision.BLOCK,
@@ -127,9 +171,12 @@ def scenario_3_inbound_fraud() -> Scenario:
                 Action(kind="book", merchant="expedia", amount=4200.0,
                        description="book 12 rooms across multiple hotels",
                        source="external_agent",
-                       raw_instruction="reserve all available inventory"),
+                       raw_instruction="reserve all available inventory",
+                       agent_type="booking",
+                       hop=1),
                 _ctx(agent_token=_NO_TOKEN, spent=0.0),
                 label="Mass-book attempt with no authority",
+                reasoning="Received booking request from external agent. No delegation token presented. Attempting mass-book of 12 rooms.",
             ),
         ],
         expect=Decision.BLOCK,

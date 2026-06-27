@@ -18,7 +18,7 @@ import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from agent_loop import run_scenario
+from agent_loop import run_scenario, _REPUTATION
 from attack import run_attack
 from credential_gate import CredentialGate
 from dotenv_lite import load_env
@@ -59,12 +59,16 @@ class Handler(BaseHTTPRequestHandler):
         elif self.path == "/api/state":
             body = json.dumps({"events": BUS.snapshot()}).encode()
             self._send(200, body, "application/json")
+        elif self.path == "/api/reputation":
+            body = json.dumps(_REPUTATION.snapshot()).encode()
+            self._send(200, body, "application/json")
         else:
             self._send(404, b"not found", "text/plain")
 
     def do_POST(self) -> None:
         if self.path == "/api/reset":
             BUS.reset()
+            _REPUTATION.reset()
             self._send(200, b'{"ok":true}', "application/json")
             return
         if self.path.startswith("/api/run/"):

@@ -40,6 +40,11 @@
   --violet-bg:   rgba(167, 139, 250, 0.08);
   --violet-border: rgba(167, 139, 250, 0.3);
 
+  --teal:        #14b8a6;
+  --teal-bg:     rgba(20, 184, 166, 0.08);
+  --teal-border: rgba(20, 184, 166, 0.32);
+  --teal-glow:   rgba(20, 184, 166, 0.16);
+
   --radius:      10px;
   --radius-lg:   14px;
 }
@@ -65,7 +70,7 @@ header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 28px;
+  padding: 10px 20px;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
   position: sticky;
@@ -80,30 +85,30 @@ header {
 }
 
 .brand-logo {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   background: linear-gradient(135deg, var(--blue) 0%, var(--violet) 100%);
-  border-radius: 9px;
+  border-radius: 7px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: 14px;
   flex-shrink: 0;
   box-shadow: 0 0 18px rgba(91, 140, 255, 0.35);
 }
 
 .brand-text h1 {
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 700;
   letter-spacing: -0.3px;
   color: var(--text);
 }
 
 .brand-text .sub {
-  font-size: 11.5px;
+  font-size: 10px;
   color: var(--text-muted);
   letter-spacing: 0.2px;
-  margin-top: 1px;
+  margin-top: 0;
 }
 
 /* -----------------------------------------------------------------------
@@ -112,8 +117,8 @@ header {
 .controls {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  gap: 6px;
+  flex-wrap: nowrap;
 }
 
 .scenario-label {
@@ -129,10 +134,10 @@ button {
   background: var(--surface-2);
   color: var(--text);
   border: 1px solid var(--border-2);
-  padding: 8px 14px;
+  padding: 5px 10px;
   border-radius: var(--radius);
   cursor: pointer;
-  font-size: 12.5px;
+  font-size: 11.5px;
   font-weight: 500;
   transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
   white-space: nowrap;
@@ -168,7 +173,7 @@ button:active { transform: translateY(1px); }
   grid-template-columns: 1fr 1fr;
   gap: 18px;
   padding: 20px 28px 32px;
-  min-height: calc(100vh - 73px);
+  min-height: calc(100vh - 55px);
 }
 
 .lane {
@@ -492,6 +497,30 @@ button:active { transform: translateY(1px); }
 .decision-chip.review { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-border); }
 .decision-chip.block  { background: var(--red-bg);   color: var(--red);   border-color: var(--red-border); }
 
+/* Score meta badges (agent_type, hop, decay) */
+.score-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.score-badge {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: rgba(255,255,255,0.05);
+  color: var(--text-muted);
+  border: 1px solid var(--border-2);
+  white-space: nowrap;
+}
+
+.score-badge.agent-type { background: var(--blue-bg); color: var(--blue); border-color: var(--blue-border); }
+.score-badge.hop        { background: var(--teal-bg); color: var(--teal); border-color: var(--teal-border); }
+.score-badge.decay      { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-border); }
+
 /* Signal table */
 .signals-label {
   font-size: 10.5px;
@@ -591,6 +620,34 @@ button:active { transform: translateY(1px); }
   display: block;
 }
 
+/* Scoped credential detail line */
+.cred-scope-line {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--teal);
+  background: var(--teal-bg);
+  border: 1px solid var(--teal-border);
+  border-radius: 5px;
+  padding: 4px 9px;
+  margin-top: 7px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.cred-scope-line .scope-item {
+  white-space: nowrap;
+}
+
+.cred-id {
+  font-family: "SF Mono", "Consolas", "Monaco", monospace;
+  font-size: 10.5px;
+  color: var(--text-dim);
+  margin-top: 5px;
+  display: block;
+}
+
 /* Booking confirmation */
 .ev-booking {
   border-color: var(--green-border);
@@ -674,6 +731,22 @@ button:active { transform: translateY(1px); }
   letter-spacing: 0.4px;
 }
 
+.human-approval-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 5px;
+  background: var(--amber-bg);
+  color: var(--amber);
+  border: 1px solid var(--amber-border);
+  margin-top: 6px;
+  margin-left: 6px;
+  letter-spacing: 0.3px;
+}
+
 /* REVIEW variant */
 .ev-blocked.review-type {
   border-color: var(--amber-border);
@@ -685,6 +758,150 @@ button:active { transform: translateY(1px); }
 .ev-blocked.review-type .withheld-badge {
   background: var(--amber-bg); color: var(--amber); border-color: var(--amber-border);
 }
+
+/* -----------------------------------------------------------------------
+   Agent Start card (compact, teal/cyan accent)
+----------------------------------------------------------------------- */
+.ev-agent_start {
+  border-color: var(--teal-border);
+  background: linear-gradient(135deg, var(--surface-2) 55%, rgba(20,184,166,0.05));
+}
+.ev-agent_start .card-header {
+  border-bottom-color: var(--teal-border);
+  padding: 7px 13px 6px;
+}
+.ev-agent_start .card-tag { background: var(--teal-bg); color: var(--teal); }
+.ev-agent_start .card-body { padding: 7px 13px 8px; }
+
+.agent-start-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.agent-type-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--teal-bg);
+  border: 1px solid var(--teal-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.agent-start-info { flex: 1; min-width: 0; }
+
+.agent-start-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.agent-start-id {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 1px;
+  font-family: "SF Mono", "Consolas", "Monaco", monospace;
+}
+
+.hop-chip {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: var(--teal-bg);
+  color: var(--teal);
+  border: 1px solid var(--teal-border);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* -----------------------------------------------------------------------
+   Reputation card (compact, color-coded)
+----------------------------------------------------------------------- */
+.ev-reputation {
+  border-color: var(--border-2);
+}
+.ev-reputation .card-header {
+  padding: 7px 13px 6px;
+  border-bottom-color: var(--border-2);
+}
+.ev-reputation .card-tag { background: rgba(255,255,255,0.05); color: var(--text-muted); }
+.ev-reputation .card-body { padding: 7px 13px 9px; }
+
+.rep-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rep-agent-id {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text);
+  font-family: "SF Mono", "Consolas", "Monaco", monospace;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rep-bar-wrap {
+  flex: 1;
+  min-width: 60px;
+}
+
+.rep-bar-track {
+  height: 5px;
+  background: var(--border-2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.rep-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.rep-bar-fill.up   { background: var(--green); }
+.rep-bar-fill.down { background: var(--red); }
+.rep-bar-fill.same { background: var(--text-dim); }
+
+.rep-values {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rep-old { color: var(--text-dim); }
+.rep-arrow { color: var(--text-dim); font-size: 10px; }
+.rep-new.up   { color: var(--green); font-weight: 700; }
+.rep-new.down { color: var(--red);   font-weight: 700; }
+.rep-new.same { color: var(--text-muted); font-weight: 600; }
+
+.rep-outcome-chip {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  padding: 2px 7px;
+  border-radius: 20px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.rep-outcome-chip.up   { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+.rep-outcome-chip.down { background: var(--red-bg);   color: var(--red);   border: 1px solid var(--red-border); }
+.rep-outcome-chip.same { background: rgba(255,255,255,0.04); color: var(--text-muted); border: 1px solid var(--border-2); }
 
 /* -----------------------------------------------------------------------
    Scrollbar styling
@@ -857,6 +1074,8 @@ async function run(key) {
 async function resetAll() {
   try {
     await fetch('/api/reset', { method: 'POST' });
+    _lastEventCount = -1;
+    _lastEventTs = -1;
     render([]);
   } catch(e) { console.error('reset failed', e); }
 }
@@ -899,6 +1118,35 @@ function band(decision) {
   if (!decision) return 'block';
   const d = decision.toUpperCase();
   return d === 'ALLOW' ? 'allow' : d === 'REVIEW' ? 'review' : 'block';
+}
+
+/* ------------------------------------------------------------------
+   Agent type display helpers
+------------------------------------------------------------------ */
+const AGENT_TYPE_ICONS = {
+  search:     '&#x1F50D;',
+  booking:    '&#x1F4C5;',
+  payment:    '&#x1F4B3;',
+  delegation: '&#x1F91D;',
+  pay:        '&#x1F4B3;',
+  book:       '&#x1F4C5;',
+};
+
+const AGENT_TYPE_LABELS = {
+  search:     'Search',
+  booking:    'Booking',
+  payment:    'Payment',
+  delegation: 'Delegation',
+  pay:        'Payment',
+  book:       'Booking',
+};
+
+function agentTypeIcon(type) {
+  return AGENT_TYPE_ICONS[(type || '').toLowerCase()] || '&#x1F916;';
+}
+
+function agentTypeLabel(type) {
+  return AGENT_TYPE_LABELS[(type || '').toLowerCase()] || (type || 'Agent');
 }
 
 /* ------------------------------------------------------------------
@@ -987,6 +1235,23 @@ function buildScoreCard(ev) {
   const decIcons = { ALLOW: '&#x2714;', REVIEW: '&#x26A0;', BLOCK: '&#x2718;' };
   const decIcon  = decIcons[dec] || '?';
 
+  // Build meta badges for agent_type, hop, decay_factor
+  let badgesHtml = '';
+  const badgeParts = [];
+  if (d.agent_type) {
+    badgeParts.push(`<span class="score-badge agent-type">${agentTypeIcon(d.agent_type)} ${escHtml(agentTypeLabel(d.agent_type))}</span>`);
+  }
+  if (d.hop !== undefined && d.hop !== null) {
+    badgeParts.push(`<span class="score-badge hop">Hop ${escHtml(String(d.hop))}</span>`);
+  }
+  if (d.decay_factor !== undefined && d.decay_factor !== null) {
+    const decay = typeof d.decay_factor === 'number' ? d.decay_factor.toFixed(2) : d.decay_factor;
+    badgeParts.push(`<span class="score-badge decay">Decay ×${escHtml(String(decay))}</span>`);
+  }
+  if (badgeParts.length) {
+    badgesHtml = `<div class="score-badges">${badgeParts.join('')}</div>`;
+  }
+
   const header = `<span class="card-tag">TRUST SCORE</span>
                   <span class="card-title">${escHtml(ev.title || '')}</span>`;
   const body   = `
@@ -999,6 +1264,7 @@ function buildScoreCard(ev) {
         <div class="score-title">${escHtml(ev.title || '')}</div>
         <div class="score-detail">${escHtml(ev.detail || '')}</div>
         <span class="decision-chip ${b}">${decIcon} ${escHtml(dec)}</span>
+        ${badgesHtml}
       </div>
     </div>
     <div class="signals-label">Signal Breakdown</div>
@@ -1032,6 +1298,28 @@ function buildCredentialCard(ev) {
       </div>`;
   }
 
+  // Scoped credential detail line
+  let scopeHtml = '';
+  if (isIssued) {
+    const scopeParts = [];
+    if (d.scope)       scopeParts.push(`<span class="scope-item">&#x1F3AF; scope: <b>${escHtml(d.scope)}</b></span>`);
+    if (d.merchant)    scopeParts.push(`<span class="scope-item">&#x1F3E8; ${escHtml(d.merchant)}</span>`);
+    if (d.max_amount)  scopeParts.push(`<span class="scope-item">max $${escHtml(String(d.max_amount))}</span>`);
+    // TTL not in current emit but include if present
+    if (d.ttl)         scopeParts.push(`<span class="scope-item">TTL ${escHtml(String(d.ttl))}s</span>`);
+    if (scopeParts.length) {
+      scopeHtml = `<div class="cred-scope-line">&#x1F4CC; Scoped to: ${scopeParts.join('<span style="color:var(--teal-border);margin:0 3px">|</span>')}</div>`;
+    }
+  }
+
+  // Credential ID (truncated)
+  let credIdHtml = '';
+  if (d.credential_id) {
+    const cid = String(d.credential_id);
+    const display = cid.length > 26 ? cid.slice(0, 13) + '…' + cid.slice(-8) : cid;
+    credIdHtml = `<span class="cred-id">ID: ${escHtml(display)}</span>`;
+  }
+
   const tokenHtml = redacted
     ? `<span class="cred-token">&#x1F511; ${escHtml(redacted)}</span>`
     : '';
@@ -1041,6 +1329,8 @@ function buildCredentialCard(ev) {
   const body   = `
     ${flowHtml}
     <div class="card-detail">${escHtml(detail)}</div>
+    ${scopeHtml}
+    ${credIdHtml}
     ${tokenHtml}`;
   return cardWrap('credential', '', header, body, ev.ts);
 }
@@ -1077,6 +1367,10 @@ function buildBlockedCard(ev) {
     ? 'Credential withheld — pending human review'
     : 'Credential never issued — secret never entered agent context';
 
+  const humanApprovalHtml = isReview
+    ? `<span class="human-approval-badge">&#x1F464; Requires human approval</span>`
+    : '';
+
   const header = `<span class="card-tag">${escHtml(dec)}</span>
                   <span class="card-title">${reason}</span>`;
   const body   = `
@@ -1085,10 +1379,84 @@ function buildBlockedCard(ev) {
       <div class="blocked-info">
         <div class="blocked-reason">${reason}</div>
         <div class="blocked-detail">${escHtml(ev.detail || '')}</div>
-        <span class="withheld-badge">&#x1F512; ${escHtml(credText)}</span>
+        <span class="withheld-badge">&#x1F512; ${escHtml(credText)}</span>${humanApprovalHtml}
       </div>
     </div>`;
   return cardWrap('blocked', isReview ? 'review-type' : '', header, body, ev.ts);
+}
+
+function buildAgentStartCard(ev) {
+  const d = ev.data || {};
+  const agentType = d.agent_type || 'agent';
+  const agentId   = d.agent_id   || ev.detail || '';
+  const hop       = d.hop !== undefined ? d.hop : null;
+
+  const icon  = agentTypeIcon(agentType);
+  const label = agentTypeLabel(agentType);
+  const hopHtml = hop !== null
+    ? `<span class="hop-chip">Hop ${escHtml(String(hop))}</span>`
+    : '';
+
+  const header = `<span class="card-tag">AGENT</span>
+                  <span class="card-title">${escHtml(label)} Agent</span>`;
+  const body   = `
+    <div class="agent-start-row">
+      <div class="agent-type-icon">${icon}</div>
+      <div class="agent-start-info">
+        <div class="agent-start-name">${escHtml(label)} sub-agent starting</div>
+        <div class="agent-start-id">${escHtml(agentId)}</div>
+      </div>
+      ${hopHtml}
+    </div>`;
+  return cardWrap('agent_start', '', header, body, ev.ts);
+}
+
+function buildReputationCard(ev) {
+  const d = ev.data || {};
+  const agentId  = d.agent_id  || '';
+  const newRep   = d.reputation !== undefined ? d.reputation : d.new_rep;
+  const oldRep   = d.old_rep   !== undefined ? d.old_rep   : null;
+  const outcome  = d.outcome   || '';
+
+  // Determine direction
+  let direction = 'same';
+  if (oldRep !== null && newRep !== undefined) {
+    if (newRep > oldRep + 0.001) direction = 'up';
+    else if (newRep < oldRep - 0.001) direction = 'down';
+  } else {
+    // Infer from outcome
+    if (outcome === 'allow_success' || outcome === 'review_approved') direction = 'up';
+    else if (outcome === 'allow_error' || outcome === 'review_rejected') direction = 'down';
+  }
+
+  const newPct = newRep !== undefined ? Math.round(newRep * 100) : null;
+  const oldPct = oldRep !== null      ? Math.round(oldRep * 100) : null;
+
+  const barWidth = newPct !== null ? `${newPct}%` : '50%';
+
+  const oldValHtml = oldPct !== null
+    ? `<span class="rep-old">${oldPct}%</span><span class="rep-arrow"> → </span>`
+    : '';
+  const newValHtml = newPct !== null
+    ? `<span class="rep-new ${direction}">${newPct}%</span>`
+    : '';
+
+  const outcomeLabel = outcome.replace(/_/g, ' ');
+
+  const header = `<span class="card-tag">REPUTATION</span>
+                  <span class="card-title">Rep updated</span>`;
+  const body   = `
+    <div class="rep-row">
+      <div class="rep-agent-id">${escHtml(agentId)}</div>
+      <div class="rep-bar-wrap">
+        <div class="rep-bar-track">
+          <div class="rep-bar-fill ${direction}" style="width:${barWidth}"></div>
+        </div>
+      </div>
+      <div class="rep-values">${oldValHtml}${newValHtml}</div>
+      ${outcomeLabel ? `<span class="rep-outcome-chip ${direction}">${escHtml(outcomeLabel)}</span>` : ''}
+    </div>`;
+  return cardWrap('reputation', '', header, body, ev.ts);
 }
 
 /* ------------------------------------------------------------------
@@ -1096,12 +1464,14 @@ function buildBlockedCard(ev) {
 ------------------------------------------------------------------ */
 function buildCard(ev) {
   switch (ev.type) {
-    case 'identity':   return buildIdentityCard(ev);
-    case 'reasoning':  return buildReasoningCard(ev);
-    case 'score':      return buildScoreCard(ev);
-    case 'credential': return buildCredentialCard(ev);
-    case 'booking':    return buildBookingCard(ev);
-    case 'blocked':    return buildBlockedCard(ev);
+    case 'identity':    return buildIdentityCard(ev);
+    case 'reasoning':   return buildReasoningCard(ev);
+    case 'score':       return buildScoreCard(ev);
+    case 'credential':  return buildCredentialCard(ev);
+    case 'booking':     return buildBookingCard(ev);
+    case 'blocked':     return buildBlockedCard(ev);
+    case 'agent_start': return buildAgentStartCard(ev);
+    case 'reputation':  return buildReputationCard(ev);
     default: {
       const el = document.createElement('div');
       el.className = 'ev-card ev-note';
@@ -1146,14 +1516,22 @@ function escHtml(str) {
 }
 
 /* ------------------------------------------------------------------
-   Polling
+   Polling — only re-render when the event list actually changes
 ------------------------------------------------------------------ */
+let _lastEventCount = -1;
+let _lastEventTs    = -1;
+
 async function poll() {
   try {
     const r = await fetch('/api/state');
     if (!r.ok) return;
     const { events } = await r.json();
-    render(events);
+    const lastTs = events.length ? events[events.length - 1].ts : 0;
+    if (events.length !== _lastEventCount || lastTs !== _lastEventTs) {
+      _lastEventCount = events.length;
+      _lastEventTs    = lastTs;
+      render(events);
+    }
     maybeToast(events);
   } catch (e) { /* server not yet up */ }
 }

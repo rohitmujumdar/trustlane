@@ -1,42 +1,45 @@
-"""P2 reputation / anomaly layer (Rohit's stretch).
+"""Auto-learning reputation tracker per agent instance.
 
-Agents build trust slowly over clean bookings and decay fast on anomalies — the
-way real fraud reputation works. OPT-IN by design: this is NOT wired into the
-demo's score() path, so the locked scenario numbers (70 / 15 / 10) are untouched.
-Enable it by calling store.adjust(agent_id, verdict.score) after scoring if you
-want a "the engine remembers" beat.
+Agents build trust slowly over successful actions and decay fast on anomalies —
+the way real fraud reputation works. Reputation is used as a multiplier in the
+trust engine's score() function: effective_score = raw * (0.7 + 0.3 * reputation).
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 
+class ReputationTracker:
+    """Auto-learning reputation per agent instance."""
 
-@dataclass
-class ReputationStore:
-    """Per-agent reputation in [0, 100]. Build slow, decay fast."""
-    start: float = 50.0
-    build_step: float = 5.0    # reward for a clean action
-    decay_step: float = 30.0   # penalty for an anomaly (asymmetric on purpose)
-    _rep: dict = field(default_factory=dict)
+    def __init__(self):
+        self._scores: dict[str, float] = {}  # agent_id -> reputation (0.0 to 1.0)
 
     def get(self, agent_id: str) -> float:
-        return self._rep.get(agent_id, self.start)
+        return self._scores.get(agent_id, 0.5)  # default 0.5 for new agents
 
-    def record_clean(self, agent_id: str) -> float:
-        self._rep[agent_id] = min(100.0, self.get(agent_id) + self.build_step)
-        return self._rep[agent_id]
+    def update(self, agent_id: str, outcome: str) -> float:
+        """Update reputation based on outcome.
 
-    def record_anomaly(self, agent_id: str) -> float:
-        self._rep[agent_id] = max(0.0, self.get(agent_id) - self.decay_step)
-        return self._rep[agent_id]
-
-    def adjust(self, agent_id: str, base_score: int) -> int:
-        """Blend reputation into a base trust score as a bounded nudge (-10..+10).
-
-        A long-trusted agent gets a small benefit of the doubt; a recently
-        anomalous one gets extra scrutiny. The nudge is deliberately small so
-        reputation tunes the score, it never overrides the hard caps.
+        Outcomes:
+          "allow_success"   -> +0.05
+          "allow_error"     -> -0.10
+          "review_approved" -> +0.02
+          "review_rejected" -> -0.08
+          "block"           -> unchanged
         """
-        nudge = round((self.get(agent_id) - self.start) / 5)
-        nudge = max(-10, min(10, nudge))
-        return max(0, min(100, base_score + nudge))
+        current = self.get(agent_id)
+        deltas = {
+            "allow_success": 0.05,
+            "allow_error": -0.10,
+            "review_approved": 0.02,
+            "review_rejected": -0.08,
+            "block": 0.0,
+        }
+        new = max(0.0, min(1.0, current + deltas.get(outcome, 0.0)))
+        self._scores[agent_id] = new
+        return new
+
+    def snapshot(self) -> dict[str, float]:
+        return dict(self._scores)
+
+    def reset(self):
+        self._scores.clear()
