@@ -1,6 +1,14 @@
-"""The numbers must land. These lock the three demo scenarios in place."""
+"""The numbers must land, and the secret must never leak.
+
+These lock the three demo scenarios in place and prove the core claim end to end:
+the payment secret resolves only on ALLOW and never reaches the console stream.
+"""
+import json
+
+from agent_loop import run_scenario
 from credential_gate import CredentialGate
 from delegation import issue_delegation, validate_delegation
+from events import EventBus
 from scenarios import all_scenarios
 from trust_engine import Decision, score
 
@@ -10,42 +18,69 @@ def _verdict(scenario):
     return score(step.action, step.context)
 
 
-def test_scenario_1_inbound_clean_allows():
-    v = _verdict(all_scenarios()["1"])
-    assert v.decision is Decision.ALLOW
-    assert v.score >= 70
+# ---- the three scenarios land exactly as the demo needs (regression guard) ----
+
+def test_every_scenario_lands_on_its_declared_outcome():
+    for key, scenario in all_scenarios().items():
+        v = _verdict(scenario)
+        assert v.decision is scenario.expect, f"S{key} decision drifted: {v.decision}"
+        assert v.score == scenario.expect_score, f"S{key} score drifted: {v.score}"
 
 
-def test_scenario_2_outbound_injection_blocks():
-    v = _verdict(all_scenarios()["2"])
-    assert v.decision is Decision.BLOCK
-    assert v.score <= 15  # injection hard cap
+def test_exact_demo_numbers():
+    s = all_scenarios()
+    assert (_verdict(s["1"]).score, _verdict(s["1"]).decision) == (70, Decision.ALLOW)
+    assert (_verdict(s["2"]).score, _verdict(s["2"]).decision) == (15, Decision.BLOCK)
+    assert (_verdict(s["3"]).score, _verdict(s["3"]).decision) == (10, Decision.BLOCK)
 
 
-def test_scenario_3_inbound_fraud_blocks():
-    v = _verdict(all_scenarios()["3"])
-    assert v.decision is Decision.BLOCK
-    assert v.score <= 10  # no-delegation hard cap
-
+# ---- the gate honors the verdict ----
 
 def test_gate_withholds_on_block():
-    v = _verdict(all_scenarios()["2"])
     gate = CredentialGate()
     try:
-        gate.issue_blocking(v)
+        gate.issue_blocking(_verdict(all_scenarios()["2"]))
         assert False, "gate must not issue on BLOCK"
     except PermissionError:
         pass
 
 
 def test_gate_issues_on_allow():
-    v = _verdict(all_scenarios()["1"])
-    secret = CredentialGate().issue_blocking(v)
-    assert secret  # mock or live, a value comes back only on ALLOW
+    secret = CredentialGate().issue_blocking(_verdict(all_scenarios()["1"]))
+    assert secret  # a value comes back only on ALLOW
 
+
+# ---- the core claim, proven through the full agent loop + event stream ----
+
+def test_secret_never_enters_event_stream():
+    gate = CredentialGate()
+    bus = EventBus()
+    for scenario in all_scenarios().values():
+        run_scenario(scenario, gate, bus)
+
+    raw_secret = gate.issue_blocking(_verdict(all_scenarios()["1"]))
+    stream = json.dumps(bus.snapshot())
+    assert raw_secret not in stream, "raw secret leaked into the console event stream"
+
+
+def test_credential_issued_only_for_allow():
+    gate = CredentialGate()
+    bus = EventBus()
+    for scenario in all_scenarios().values():
+        run_scenario(scenario, gate, bus)
+
+    events = bus.snapshot()
+    issued = [e for e in events if e["type"] == "credential" and "issued" in e["title"].lower()]
+    blocked = [e for e in events if e["type"] == "blocked"]
+    allow_count = sum(1 for s in all_scenarios().values() if s.expect is Decision.ALLOW)
+    block_count = sum(1 for s in all_scenarios().values() if s.expect is Decision.BLOCK)
+    assert len(issued) == allow_count
+    assert len(blocked) == block_count
+
+
+# ---- delegation integrity (inbound identity) ----
 
 def test_delegation_subset_enforced():
-    # A child scope that exceeds the parent must fail the subset check.
     tok = issue_delegation(
         agent_id="a", principal="p",
         scope={"actions": ["book", "delegate"], "merchants": ["expedia"], "max_amount": 5000},

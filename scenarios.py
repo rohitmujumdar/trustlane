@@ -15,7 +15,7 @@ from dataclasses import dataclass
 
 from delegation import issue_delegation, validate_delegation
 from mock_expedia import DEFAULT_ALLOWLIST, HOTELS
-from trust_engine import Action, Context
+from trust_engine import Action, Context, Decision
 
 TASK = "Book Chicago, July 4 weekend, under $800."
 BUDGET = 800.0
@@ -35,6 +35,8 @@ class Scenario:
     title: str
     identity: str      # narration for the identity event
     steps: list[Step]
+    expect: Decision   # the on-stage outcome this scenario must produce
+    expect_score: int  # the exact score it must land on (regression guard)
 
 
 # --- delegation tokens (inbound) -------------------------------------------
@@ -77,6 +79,8 @@ def scenario_1_inbound_clean() -> Scenario:
                 label="Book hotel (flight already booked at $412)",
             ),
         ],
+        expect=Decision.ALLOW,
+        expect_score=70,
     )
 
 
@@ -97,6 +101,8 @@ def scenario_2_outbound_injection() -> Scenario:
                 label="Listing content instructs: add insurance + upgrade",
             ),
         ],
+        expect=Decision.BLOCK,
+        expect_score=15,  # injection hard cap
     )
 
 
@@ -116,6 +122,8 @@ def scenario_3_inbound_fraud() -> Scenario:
                 label="Mass-book attempt with no authority",
             ),
         ],
+        expect=Decision.BLOCK,
+        expect_score=10,  # no-delegation hard cap
     )
 
 
