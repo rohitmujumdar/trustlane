@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+
+# Secrets and local config
+.env
+*.env
+!.env.example
+
+# Audit log output
+audit.log.jsonl
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/

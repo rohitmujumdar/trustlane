@@ -1,0 +1,6 @@
+# The demo runs on the Python standard library alone — no install needed.
+#
+# Uncomment to wire the real 1Password vault and dev tooling:
+# onepassword-sdk>=0.1.0
+# python-dotenv>=1.0
+# pytest>=7.0
