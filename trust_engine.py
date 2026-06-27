@@ -187,9 +187,9 @@ def score(action: Action, context: Context, reputation_score: float = 0.5) -> Ve
 
     # ---- hard caps (fraud-engine style: hard rules override the soft score) ----
     cap = 100
-    if action.source == "listing_content":           # prompt injection
-        cap = min(cap, 15)
-    if (context.spent_so_far + action.amount) > context.budget:
+    # Prompt injection: force into REVIEW band — system catches it, human makes the final call
+    injection_detected = action.source == "listing_content"
+    if (context.spent_so_far + action.amount) > context.budget and not injection_detected:
         cap = min(cap, 40)
     if action.source == "external_agent" and not (
         context.agent_token
@@ -199,6 +199,11 @@ def score(action: Action, context: Context, reputation_score: float = 0.5) -> Ve
         cap = min(cap, 10)                            # bot with no delegation
 
     final = min(int(round(effective_score)), cap)
+
+    # Injection detected: clamp into REVIEW band (system caught it, human decides)
+    if injection_detected and final < 40:
+        final = 42
+
     decision = (
         Decision.ALLOW if final >= 70
         else Decision.REVIEW if final >= 40

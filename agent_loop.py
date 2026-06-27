@@ -117,6 +117,11 @@ def _handle_book(
         bus.emit(lane, "credential", "Credential revoked",
                  "one-time credential discarded after booking")
         return {"status": "booked", "merchant": action.merchant, "amount": action.amount, "outcome": "allow_success"}
+    elif verdict.decision is Decision.REVIEW:
+        bus.emit(lane, "blocked", f"Action {verdict.decision.value}",
+                 f"credential withheld — requires human approval (score {verdict.score})",
+                 score=verdict.score, decision=verdict.decision.value)
+        return {"status": "review", "decision": verdict.decision.value, "score": verdict.score, "outcome": "block"}
     else:
         bus.emit(lane, "blocked", f"Action {verdict.decision.value}",
                  f"credential never issued (score {verdict.score})",
