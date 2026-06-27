@@ -35,24 +35,33 @@ If you name things differently, set `TRUSTLANE_SECRET_REF` in `.env` to match.
 
 ## 3. Install the SDK and fill in `.env`
 
+The SDK needs **Python 3.10+** (it fails to import on 3.9). Use a virtualenv:
+
 ```bash
-pip install onepassword-sdk
+python3.12 -m venv .venv
+.venv/bin/pip install onepassword-sdk
 cp .env.example .env
 ```
 
 Then edit `.env`:
 
 ```
-OP_SERVICE_ACCOUNT_TOKEN=<paste the service account token>
-TRUSTLANE_SECRET_REF=op://TrustLane/ExpediaPayment/credential
+OP_SERVICE_ACCOUNT_TOKEN=ops_<paste the service account token>
+TRUSTLANE_SECRET_REF=op://<vault>/<item title>/<field>
 ```
+
+For `TRUSTLANE_SECRET_REF`, don't guess the names. In the item, click the
+chevron next to the field's Copy button and choose **Copy Secret Reference** —
+that gives the exact `op://...` string. Note the reference uses the item's
+**title** (which may be the default, e.g. `API Credentials`), not a field value,
+and it can contain spaces.
 
 `.env` is gitignored, so the token never gets committed.
 
 ## 4. Verify
 
 ```bash
-python verify_1password.py
+.venv/bin/python verify_1password.py
 ```
 
 Expected:
@@ -69,7 +78,8 @@ vault).
 ## 5. Run the demo live
 
 ```bash
-python demo.py
+.venv/bin/python demo.py     # headless: prints DEMO READY
+.venv/bin/python server.py   # live two-lane console at http://localhost:8077
 ```
 
 The header now reads `1Password gate: LIVE vault`, and on Scenario 1 the gate
