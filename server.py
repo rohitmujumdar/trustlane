@@ -5,6 +5,7 @@
 Serves the console and exposes a tiny API the front-end polls:
   GET  /api/state         -> all events so far (JSON)
   POST /api/run/{1|2|3}   -> fire a pre-staged scenario through engine + gate
+  POST /api/attack        -> Scenario 4: score a judge's typed attack live
   POST /api/reset         -> clear the board
 
 Everything runs deterministically off the rule-based engine and the mock vault,
@@ -17,6 +18,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from agent_loop import run_scenario
+from attack import run_attack
 from credential_gate import CredentialGate
 from events import EventBus
 from scenarios import all_scenarios
@@ -58,6 +60,12 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(404, b'{"ok":false}', "application/json")
                 return
             run_scenario(scenarios[key], GATE, BUS)
+            self._send(200, b'{"ok":true}', "application/json")
+            return
+        if self.path == "/api/attack":
+            length = int(self.headers.get("Content-Length", 0))
+            payload = json.loads(self.rfile.read(length) or b"{}")
+            run_attack(payload.get("text", ""), GATE, BUS, lane="outbound")
             self._send(200, b'{"ok":true}', "application/json")
             return
         self._send(404, b"not found", "text/plain")
