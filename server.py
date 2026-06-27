@@ -14,17 +14,24 @@ so it is safe to drive live on stage (handoff section 8).
 from __future__ import annotations
 
 import json
+import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from agent_loop import run_scenario
 from attack import run_attack
 from credential_gate import CredentialGate
+from dotenv_lite import load_env
 from events import EventBus
+from notify import notify_blocked
 from scenarios import all_scenarios
+from trust_engine import Decision
 
+load_env()  # so the console picks up OP_SERVICE_ACCOUNT_TOKEN / TRUSTLANE_SECRET_REF
 BUS = EventBus()
-GATE = CredentialGate()  # mock vault unless OP_SERVICE_ACCOUNT_TOKEN is set
+GATE = CredentialGate(  # live vault when a token is set, mock otherwise
+    secret_ref=os.environ.get("TRUSTLANE_SECRET_REF", "op://TrustLane/ExpediaPayment/credential")
+)
 CONSOLE = Path(__file__).parent / "console" / "index.html"
 
 
@@ -59,13 +66,19 @@ class Handler(BaseHTTPRequestHandler):
             if key not in scenarios:
                 self._send(404, b'{"ok":false}', "application/json")
                 return
-            run_scenario(scenarios[key], GATE, BUS)
+            sc = scenarios[key]
+            run_scenario(sc, GATE, BUS)
+            if sc.expect is Decision.BLOCK:
+                notify_blocked(sc.title, sc.expect_score)
             self._send(200, b'{"ok":true}', "application/json")
             return
         if self.path == "/api/attack":
             length = int(self.headers.get("Content-Length", 0))
             payload = json.loads(self.rfile.read(length) or b"{}")
-            run_attack(payload.get("text", ""), GATE, BUS, lane="outbound")
+            text = payload.get("text", "")
+            verdict = run_attack(text, GATE, BUS, lane="outbound")
+            if verdict.decision is Decision.BLOCK:
+                notify_blocked(f"attack: {text[:48]}", verdict.score)
             self._send(200, b'{"ok":true}', "application/json")
             return
         self._send(404, b"not found", "text/plain")

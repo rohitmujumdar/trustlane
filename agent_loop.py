@@ -22,6 +22,10 @@ def run_scenario(scenario: Scenario, gate: CredentialGate, bus: EventBus) -> Non
 
     bus.emit(lane, "identity", scenario.title, scenario.identity)
 
+    deleg = getattr(scenario, "delegation", None)
+    if deleg:
+        bus.emit(lane, "delegation", "Delegation chain", "", **deleg)
+
     for step in scenario.steps:
         verdict = score(step.action, step.context)
 

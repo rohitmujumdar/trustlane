@@ -12,6 +12,7 @@ Three scenarios:
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Optional
 
 from delegation import issue_delegation, validate_delegation
 from mock_expedia import DEFAULT_ALLOWLIST, HOTELS
@@ -37,6 +38,7 @@ class Scenario:
     steps: list[Step]
     expect: Decision   # the on-stage outcome this scenario must produce
     expect_score: int  # the exact score it must land on (regression guard)
+    delegation: Optional[dict] = None  # inbound: the delegation chain to visualize
 
 
 # --- delegation tokens (inbound) -------------------------------------------
@@ -81,6 +83,14 @@ def scenario_1_inbound_clean() -> Scenario:
         ],
         expect=Decision.ALLOW,
         expect_score=70,
+        delegation={
+            "agent": "agent://alice-personal",
+            "principal": "alice",
+            "parent_scope": {"actions": ["search", "book", "pay", "delegate"], "max_amount": 1500},
+            "child_scope": {"actions": ["search", "book", "pay"], "max_amount": 800},
+            "valid": True,
+            "subset": True,
+        },
     )
 
 
@@ -124,6 +134,14 @@ def scenario_3_inbound_fraud() -> Scenario:
         ],
         expect=Decision.BLOCK,
         expect_score=10,  # no-delegation hard cap
+        delegation={
+            "agent": "agent://unknown-bot",
+            "principal": None,
+            "parent_scope": None,
+            "child_scope": None,
+            "valid": False,
+            "subset": False,
+        },
     )
 
 

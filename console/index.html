@@ -60,6 +60,18 @@
   .attack-row input { flex: 1; background: var(--bg); color: var(--text);
                       border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; font-size: 13px; }
   .attack-row input:focus { outline: none; border-color: var(--red); }
+  .ev.delegation { border-color: var(--accent); }
+  .chain { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; font-size: 12px; }
+  .chip { border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; color: var(--muted); }
+  .chip.principal { color: var(--text); border-color: var(--accent); }
+  .chain .arrow { color: var(--muted); }
+  .chain .ok { color: var(--green); } .chain .no { color: var(--red); }
+  #toasts { position: fixed; right: 20px; bottom: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 50; }
+  .toast { background: var(--red-bg); border: 1px solid var(--red); color: var(--text);
+           padding: 12px 16px; border-radius: 10px; font-size: 13px; max-width: 340px;
+           box-shadow: 0 8px 24px rgba(0,0,0,.4); animation: slidein .2s ease; }
+  .toast b { color: var(--red); }
+  @keyframes slidein { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
 </style>
 </head>
 <body>
@@ -100,6 +112,8 @@
     </div>
   </div>
 
+  <div id="toasts"></div>
+
 <script>
 async function run(key) { await fetch('/api/run/' + key, {method: 'POST'}); }
 async function reset() { await fetch('/api/reset', {method: 'POST'}); render([]); }
@@ -116,6 +130,12 @@ function band(decision) {
   return decision === 'ALLOW' ? 'allow' : decision === 'REVIEW' ? 'review' : 'block';
 }
 
+function scopeChip(label, scope) {
+  if (!scope) return `<span class="chip">${label}: none</span>`;
+  const amt = scope.max_amount != null ? ` ≤$${scope.max_amount}` : '';
+  return `<span class="chip">${label}: ${(scope.actions || []).join('/')}${amt}</span>`;
+}
+
 function evNode(ev) {
   const el = document.createElement('div');
   el.className = 'ev ' + ev.type;
@@ -128,10 +148,38 @@ function evNode(ev) {
       `<div class="score"><div class="gauge ${band(d.decision)}">${d.score}</div>`
       + `<div><div class="t">${ev.title}</div><div class="d">${ev.detail || ''}</div></div></div>`
       + `<div class="signals">${sigs}</div>`;
+  } else if (ev.type === 'delegation') {
+    const d = ev.data || {};
+    const verdict = d.valid && d.subset
+      ? `<span class="ok">✓ valid, scope ⊆ parent</span>`
+      : `<span class="no">✗ ${d.valid ? 'scope exceeds parent' : 'no valid delegation'}</span>`;
+    el.innerHTML =
+      `<div class="t">${ev.title}</div>`
+      + `<div class="chain">`
+      + `<span class="chip principal">${d.principal || 'unknown'}</span><span class="arrow">→</span>`
+      + `<span class="chip">${d.agent || '?'}</span><span class="arrow">·</span>`
+      + scopeChip('parent', d.parent_scope) + scopeChip('child', d.child_scope)
+      + `</div><div class="d" style="margin-top:6px">${verdict}</div>`;
   } else {
     el.innerHTML = `<div class="t">${ev.title}</div><div class="d">${ev.detail || ''}</div>`;
   }
   return el;
+}
+
+const toasted = new Set();
+let booted = false;
+function maybeToast(events) {
+  const blocks = events.filter(e => e.type === 'blocked');
+  if (!booted) { blocks.forEach(e => toasted.add(e.ts)); booted = true; return; }
+  for (const e of blocks) {
+    if (toasted.has(e.ts)) continue;
+    toasted.add(e.ts);
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.innerHTML = `<b>Blocked</b> — ${e.detail || e.title}`;
+    document.getElementById('toasts').appendChild(t);
+    setTimeout(() => t.remove(), 5000);
+  }
 }
 
 function render(events) {
@@ -149,6 +197,7 @@ async function poll() {
     const r = await fetch('/api/state');
     const { events } = await r.json();
     render(events);
+    maybeToast(events);
   } catch (e) { /* server not up yet */ }
 }
 setInterval(poll, 500);
