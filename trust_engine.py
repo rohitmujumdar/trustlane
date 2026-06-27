@@ -179,9 +179,11 @@ def score(action: Action, context: Context, reputation_score: float = 0.5) -> Ve
     decay = get_decay_factor(action.hop)
     raw = sum(s.weight for s in signals if s.passed) * decay
 
-    # Apply reputation adjustment: effective = raw * (0.7 + 0.3 * reputation)
+    # Apply reputation adjustment: 0.5 = neutral (×1.0), >0.5 = bonus, <0.5 = penalty
+    # At rep 0.0: ×0.85, at rep 0.5: ×1.0, at rep 1.0: ×1.15
     reputation_score = max(0.0, min(1.0, reputation_score))
-    effective_score = raw * (0.7 + 0.3 * reputation_score)
+    rep_factor = 1.0 + 0.3 * (reputation_score - 0.5)
+    effective_score = raw * rep_factor
 
     # ---- hard caps (fraud-engine style: hard rules override the soft score) ----
     cap = 100

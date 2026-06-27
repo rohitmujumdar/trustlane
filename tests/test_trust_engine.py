@@ -67,7 +67,7 @@ def test_exact_demo_numbers():
     v1 = _verdict(s["1"])
     v2 = _verdict(s["2"])
     v3 = _verdict(s["3"])
-    assert (v1.score, v1.decision) == (76, Decision.ALLOW), f"S1: {v1.score} {v1.decision}"
+    assert (v1.score, v1.decision) == (90, Decision.ALLOW), f"S1: {v1.score} {v1.decision}"
     assert (v2.score, v2.decision) == (15, Decision.BLOCK), f"S2: {v2.score} {v2.decision}"
     assert (v3.score, v3.decision) == (10, Decision.BLOCK), f"S3: {v3.score} {v3.decision}"
 
