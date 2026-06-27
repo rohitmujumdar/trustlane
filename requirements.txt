@@ -18,5 +18,8 @@ httpx>=0.27.0
 # Environment variable loading
 python-dotenv>=1.0.0
 
+# Anthropic SDK (for LLM-powered agent — requires LIVE_LLM=1 and ANTHROPIC_API_KEY)
+anthropic>=0.40.0
+
 # Testing
 pytest>=7.0

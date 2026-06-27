@@ -18,14 +18,15 @@ import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from agent_loop import run_scenario, _REPUTATION
+from agent_loop import run_scenario, run_live_scenario, LIVE_LLM, _REPUTATION
 from attack import run_attack
 from credential_gate import CredentialGate
 from dotenv_lite import load_env
 from events import EventBus
+from mock_expedia import DEFAULT_ALLOWLIST
 from notify import notify_blocked
 from scenarios import all_scenarios
-from trust_engine import Decision
+from trust_engine import Context, Decision
 
 load_env()  # so the console picks up OP_SERVICE_ACCOUNT_TOKEN / TRUSTLANE_SECRET_REF
 BUS = EventBus()
@@ -62,6 +63,9 @@ class Handler(BaseHTTPRequestHandler):
         elif self.path == "/api/reputation":
             body = json.dumps(_REPUTATION.snapshot()).encode()
             self._send(200, body, "application/json")
+        elif self.path == "/api/config":
+            body = json.dumps({"live_llm": LIVE_LLM}).encode()
+            self._send(200, body, "application/json")
         else:
             self._send(404, b"not found", "text/plain")
 
@@ -90,6 +94,25 @@ class Handler(BaseHTTPRequestHandler):
             verdict = run_attack(text, GATE, BUS, lane="outbound")
             if verdict.decision is Decision.BLOCK:
                 notify_blocked(f"attack: {text[:48]}", verdict.score)
+            self._send(200, b'{"ok":true}', "application/json")
+            return
+        if self.path == "/api/live":
+            if not LIVE_LLM:
+                self._send(400, b'{"error":"Live LLM mode not enabled"}', "application/json")
+                return
+            length = int(self.headers.get("Content-Length", 0))
+            payload = json.loads(self.rfile.read(length) or b"{}")
+            prompt = payload.get("prompt", "").strip()
+            budget = float(payload.get("budget", 800))
+            if not prompt:
+                self._send(400, b'{"error":"prompt is required"}', "application/json")
+                return
+            context = Context(
+                declared_task=prompt,
+                budget=budget,
+                vendor_allowlist=DEFAULT_ALLOWLIST,
+            )
+            run_live_scenario(prompt, context, GATE, BUS, lane="outbound")
             self._send(200, b'{"ok":true}', "application/json")
             return
         self._send(404, b"not found", "text/plain")

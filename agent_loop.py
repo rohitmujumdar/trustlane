@@ -14,9 +14,13 @@ Verdict obedience:
 
 Demo safety: CachedAgentRunner pattern — pre-baked reasoning strings per step,
 no live LLM, fully deterministic.
+
+Live LLM mode: set LIVE_LLM=1 to enable the Claude-powered LLMBookingAgent.
+The deterministic replay stays default when LIVE_LLM is not set.
 """
 from __future__ import annotations
 
+import os
 import time
 from dataclasses import dataclass
 from typing import Any, Callable, Optional
@@ -27,6 +31,8 @@ from mock_expedia import search_flights, search_hotels, search_cars, get_listing
 from reputation import ReputationTracker
 from scenarios import Scenario, Step
 from trust_engine import Action, AgentType, Context, Decision, score
+
+LIVE_LLM = os.environ.get("LIVE_LLM", "0") == "1"
 
 
 # ---------------------------------------------------------------------------
@@ -272,6 +278,23 @@ def run_scenario(scenario: Scenario, gate: CredentialGate, bus: EventBus) -> Non
     """
     orch = Orchestrator(gate, bus, _REPUTATION)
     orch.run_scenario(scenario)
+
+
+def run_live_scenario(
+    prompt: str,
+    context: Context,
+    gate: CredentialGate,
+    bus: EventBus,
+    lane: str,
+) -> None:
+    """Run a free-text prompt through the live Claude-powered LLMBookingAgent.
+
+    Only available when LIVE_LLM=1 is set. The deterministic run_scenario()
+    remains the default and is completely unaffected by this function.
+    """
+    from llm_agent import LLMBookingAgent  # lazy import — only needed in live mode
+    agent = LLMBookingAgent(gate=gate, bus=bus, reputation=_REPUTATION, lane=lane)
+    agent.run(prompt, context)
 
 
 # ---------------------------------------------------------------------------
