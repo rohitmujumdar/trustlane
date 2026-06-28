@@ -12,6 +12,7 @@ Owner: Rohit (the trust path). P2: layer reputation/anomaly on top of this.
 """
 from __future__ import annotations
 
+import copy
 import hashlib
 import hmac
 import json
@@ -52,6 +53,13 @@ def issue_delegation(
         if not parent_token.get("can_delegate", True):
             raise PermissionError("Parent token has can_delegate=False; cannot issue child token")
         hop = parent_hop + 1
+
+    # Snapshot scope/parent_scope at signing time. If a caller passes a reference
+    # to a list that later mutates (e.g. a shared merchant allowlist that grows as
+    # new inventory is generated), the token's signature would otherwise break and
+    # a valid delegated agent would be wrongly rejected.
+    scope = copy.deepcopy(scope)
+    parent_scope = copy.deepcopy(parent_scope)
 
     payload = {
         "agent_id": agent_id,
