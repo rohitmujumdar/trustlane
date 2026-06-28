@@ -33,9 +33,8 @@ match and run all three steps. Use the chosen listing's exact id, merchant, and 
 booking and payment.
 
 This is a demo with mock inventory — dates are fixed so ignore date mismatches. \
-Available cities are: Chicago, Miami, and New York. If the user asks for a city not in this \
-list, tell them it's not available and suggest these three cities instead. Do NOT book a \
-different city than what the user asked for. Keep reasoning to 1-2 sentences per step."""
+Any city is available. Search for exactly what the user asks for. Keep reasoning to 1-2 \
+sentences per step."""
 
 _TOOLS = [
     {

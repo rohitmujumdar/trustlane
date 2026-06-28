@@ -170,9 +170,102 @@ _CITY_CODES = {
     "new york": ("JFK", "LGA", "EWR"), "nyc": ("JFK",), "ny": ("JFK",),
 }
 
+# Well-known city -> airport mapping for dynamic generation
+_AIRPORT_MAP = {
+    "london": "LHR", "paris": "CDG", "tokyo": "NRT", "sydney": "SYD",
+    "dubai": "DXB", "singapore": "SIN", "rome": "FCO", "berlin": "BER",
+    "toronto": "YYZ", "mumbai": "BOM", "delhi": "DEL", "bangkok": "BKK",
+    "barcelona": "BCN", "amsterdam": "AMS", "san francisco": "SFO",
+    "los angeles": "LAX", "seattle": "SEA", "boston": "BOS", "denver": "DEN",
+    "austin": "AUS", "nashville": "BNA", "portland": "PDX", "atlanta": "ATL",
+    "dallas": "DFW", "houston": "IAH", "phoenix": "PHX", "las vegas": "LAS",
+    "honolulu": "HNL", "cancun": "CUN", "lisbon": "LIS", "seoul": "ICN",
+}
+
+import hashlib
+
+# Dynamic inventory cache so generated listings persist within a session
+_dynamic_flights: dict[str, list[dict]] = {}
+_dynamic_hotels: dict[str, list[dict]] = {}
+
+
+def _generate_flights(city: str, code: str) -> list[dict]:
+    """Generate 2 realistic fake flights for any city."""
+    seed = int(hashlib.md5(city.encode()).hexdigest()[:8], 16)
+    airlines = [("United Airlines", "UA"), ("Delta", "DL"), ("American Airlines", "AA"),
+                ("JetBlue", "B6"), ("Southwest", "WN"), ("Alaska", "AS")]
+    a1 = airlines[seed % len(airlines)]
+    a2 = airlines[(seed + 3) % len(airlines)]
+    base_price = 180 + (seed % 300)
+    slug = city.replace(" ", "-")[:10]
+    return [
+        {"id": f"fl-{slug}-1", "merchant": "expedia", "route": f"SFO->{code}",
+         "airline": a1[0], "flight_number": f"{a1[1]} {1000 + seed % 9000}",
+         "origin": "SFO", "destination": code,
+         "departure": "2026-07-04T07:30:00", "arrival": "2026-07-04T15:00:00",
+         "duration_min": 200 + seed % 300, "price": float(base_price),
+         "price_usd": float(base_price), "cabin": "Economy", "seats_left": 8 + seed % 20,
+         "depart": "2026-07-03", "return": "2026-07-06"},
+        {"id": f"fl-{slug}-2", "merchant": "expedia", "route": f"SFO->{code}",
+         "airline": a2[0], "flight_number": f"{a2[1]} {2000 + seed % 8000}",
+         "origin": "SFO", "destination": code,
+         "departure": "2026-07-04T14:00:00", "arrival": "2026-07-04T22:30:00",
+         "duration_min": 220 + seed % 280, "price": float(base_price + 45),
+         "price_usd": float(base_price + 45), "cabin": "Economy", "seats_left": 5 + seed % 15,
+         "depart": "2026-07-03", "return": "2026-07-06"},
+    ]
+
+
+def _generate_hotels(city: str) -> list[dict]:
+    """Generate 2 realistic fake hotels for any city (one budget, one luxury)."""
+    seed = int(hashlib.md5(city.encode()).hexdigest()[:8], 16)
+    title = city.title()
+    slug = city.replace(" ", "-")[:10]
+    budget_price = 90 + (seed % 120)
+    lux_price = 350 + (seed % 400)
+    merchant_b = f"hotel-{slug}-budget"
+    merchant_l = f"hotel-{slug}-luxury"
+    # Add merchants to allowlist dynamically
+    if merchant_b not in DEFAULT_ALLOWLIST:
+        DEFAULT_ALLOWLIST.extend([merchant_b, merchant_l])
+    return [
+        {"id": f"ht-{slug}-1", "merchant": merchant_b,
+         "name": f"{title} Central Inn",
+         "address": f"120 Main St, {title}",
+         "stars": 3, "nights": 3, "price": float(budget_price * 3),
+         "price_per_night_usd": float(budget_price), "total_usd": float(budget_price * 3),
+         "check_in": "2026-07-04", "check_out": "2026-07-06",
+         "amenities": ["WiFi", "Breakfast"],
+         "rooms_left": 6 + seed % 10,
+         "listing_content": f"Affordable stay in the heart of {title}."},
+        {"id": f"ht-{slug}-2", "merchant": merchant_l,
+         "name": f"Grand {title} Resort & Spa",
+         "address": f"1 Luxury Ave, {title}",
+         "stars": 5, "nights": 3, "price": float(lux_price * 3),
+         "price_per_night_usd": float(lux_price), "total_usd": float(lux_price * 3),
+         "check_in": "2026-07-04", "check_out": "2026-07-06",
+         "amenities": ["WiFi", "Spa", "Pool", "Fine Dining", "Concierge"],
+         "rooms_left": 2 + seed % 4,
+         "listing_content": f"Five-star luxury in {title} with world-class amenities."},
+    ]
+
+
+def _get_dynamic_flights(city: str) -> list[dict]:
+    if city not in _dynamic_flights:
+        code = _AIRPORT_MAP.get(city, city[:3].upper())
+        _dynamic_flights[city] = _generate_flights(city, code)
+    return _dynamic_flights[city]
+
+
+def _get_dynamic_hotels(city: str) -> list[dict]:
+    if city not in _dynamic_hotels:
+        _dynamic_hotels[city] = _generate_hotels(city)
+    return _dynamic_hotels[city]
+
 
 def search_flights(route: str = "") -> list[dict]:
-    """Find flights by route ('SFO->ORD'), partial route ('ORD'), or city name."""
+    """Find flights by route ('SFO->ORD'), partial route ('ORD'), or city name.
+    If no hardcoded match, generates realistic mock flights on the fly."""
     q = (route or "").strip().lower()
     if not q:
         return list(FLIGHTS)
@@ -182,16 +275,23 @@ def search_flights(route: str = "") -> list[dict]:
     for city, codes in _CITY_CODES.items():
         if city in q:
             return [f for f in FLIGHTS if f["destination"] in codes]
+    # Dynamic generation for unknown cities
+    city = q.replace("->", " ").replace("sfo", "").strip()
+    if city:
+        return _get_dynamic_flights(city)
     return []
 
 
 def search_hotels(city: str = "chicago") -> list[dict]:
-    """Find hotels by city name (matched against the name and address), so every
-    listing in a city shows up — including the luxury, over-budget ones."""
+    """Find hotels by city name. If no hardcoded match, generates on the fly."""
     q = (city or "").strip().lower()
     if not q:
         return list(HOTELS)
-    return [h for h in HOTELS if q in h["name"].lower() or q in h.get("address", "").lower()]
+    hits = [h for h in HOTELS if q in h["name"].lower() or q in h.get("address", "").lower()]
+    if hits:
+        return hits
+    # Dynamic generation for unknown cities
+    return _get_dynamic_hotels(q)
 
 
 def search_cars(city: str = "chicago") -> list[dict]:
@@ -199,9 +299,19 @@ def search_cars(city: str = "chicago") -> list[dict]:
 
 
 def get_listing(listing_id: str) -> dict | None:
+    # Check hardcoded first
     for item in (*HOTELS, *FLIGHTS, *CARS):
         if item["id"] == listing_id:
             return item
+    # Check dynamic inventory
+    for flights in _dynamic_flights.values():
+        for f in flights:
+            if f["id"] == listing_id:
+                return f
+    for hotels in _dynamic_hotels.values():
+        for h in hotels:
+            if h["id"] == listing_id:
+                return h
     return None
 
 
