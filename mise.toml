@@ -1,0 +1,8 @@
+# Railway/Railpack installs Python via mise. The prebuilt CPython artifact ships
+# without GitHub attestations, which makes mise's verification step fail the build.
+# Disable that check (it only affects how the Python binary is fetched, not the app).
+[tools]
+python = "3.11.9"
+
+[settings]
+python.github_attestations = false
