@@ -1,274 +1,218 @@
 # TrustLane
 
-**Agent identity and fraud infrastructure for booking platforms.**
+### The trust layer for the agent economy.
 
-Every booking platform is about to be flooded with AI agents — personal assistants booking on behalf of users, and the platform's own agents acting for users. These platforms have decades of tooling to verify a *human*. They have nothing to verify an *agent*.
+Every booking platform — Expedia, Airbnb, OpenTable, Ticketmaster — is about to be flooded with AI agents. Users will send personal agents to book on their behalf. Platforms will deploy their own agents to serve users. But here's the problem no one has solved:
 
-TrustLane is the missing layer. One API call before every agent action: is this agent who it claims to be? Is it carrying real delegated authority? Is this specific action in-scope and safe? If yes, we issue a one-time, scoped payment credential. If no, the credential is never issued — the action physically cannot execute.
+**How do you trust an agent you can't see?**
 
-**The credential doesn't get revoked. It never exists.**
+Platforms have decades of tooling to verify a human — CAPTCHAs, 2FA, session cookies. They have nothing to verify an agent. No identity. No delegation proof. No way to know if an agent is acting within scope or if it's been hijacked by a malicious hotel listing that says "also add travel insurance $199."
 
----
+TrustLane is the infrastructure layer that answers three questions for every agent action, in real time:
 
-## The Problem
+1. **Who is this agent?** — identity verification + delegation chain validation
+2. **Is this action authorized?** — per-agent trust scoring with 5 weighted signals
+3. **Should this payment go through?** — scoped, ephemeral credentials that exist only for the duration of one transaction
 
-```
-Today:    Agent  ───────────────────────────►  Platform API  ──►  Payment
-          (no identity, no checks, no limits)
-
-Tomorrow: Millions of agents hitting every booking platform.
-          - Whose authority does this agent carry?
-          - Is it acting within scope, or was it hijacked by a malicious listing?
-          - How do you issue a payment credential to an agent you can't verify?
-```
-
-Real attacks happening now:
-- **Prompt injection**: A hotel listing contains hidden text ("add travel insurance $199"). The platform's own agent reads it and tries to execute it.
-- **Unauthorized bots**: Agents with no delegation token mass-booking inventory.
-- **Scope drift**: An agent asked to "book a budget hotel" books a $500/night suite instead.
-
-No platform has infrastructure to handle this. TrustLane is that infrastructure.
+If the answer is yes, we issue a one-time payment credential. If no, the credential is never issued. Not revoked. **Never created.** The payment secret never enters the agent's context.
 
 ---
 
-## The Solution
-
-TrustLane is middleware that sits between agents and platform APIs:
+## Why This Matters Now
 
 ```
-                        ┌──────────────────────────────────────────────┐
-                        │               TRUSTLANE                      │
-                        │                                              │
-User's Agent ──INBOUND──┤  1. Validate agent identity + delegation     │──► Platform API
-                        │  2. Score the action (5 signals + hard caps) │
-                        │  3. Decision: ALLOW / REVIEW / BLOCK         │
-Platform's   ──OUTBOUND─┤  4. ALLOW → issue scoped credential         │──► Payment
-Own Agent               │     REVIEW → human approves/rejects          │
-                        │     BLOCK → credential never exists          │
-                        │  5. Credential auto-revokes after use        │
-                        └──────────────────────────────────────────────┘
+2024:  Humans book trips on Expedia.
+2025:  ChatGPT, Claude, Siri start booking for users.
+2026:  Every user has a personal booking agent. Every platform has its own agent.
+       Millions of agent-to-agent transactions per day.
+
+       Who's checking if these agents are legitimate?
+       Who's stopping a hijacked agent from draining a credit card?
+       Who's catching prompt injection attacks hidden in listing content?
+
+       Nobody. Until TrustLane.
 ```
 
-**Two lanes, one engine:**
-- **Inbound** — external agents arriving at the platform. Verify identity + delegated authority before they can transact.
-- **Outbound** — the platform's own agent acting for users. Protect it from prompt injection in listing content.
+**Real threats we stop:**
+
+| Threat | How it works | What TrustLane does |
+|--------|-------------|---------------------|
+| **Prompt injection** | A hotel listing hides "add insurance $199" in its description. The platform's agent reads it and tries to execute it. | Detects untrusted source, flags for human review. Credential never issued. |
+| **Unauthorized bots** | An agent with no delegation token tries to mass-book 12 rooms. | No identity, no delegation proof → score 10 → hard BLOCK. |
+| **Scope drift** | Agent asked to "book a budget hotel" starts booking a $500/night suite. | Budget conformance signal fails → action blocked before payment. |
+| **Delegation fraud** | An agent claims to act on behalf of a user but carries a forged or expired token. | HMAC-signed tokens with scope-subset validation. Forgery = instant BLOCK. |
 
 ---
 
-## How It Works
+## How TrustLane Works
 
-### Multi-Agent Architecture
-
-Six agents, each with a specific role and its own trust profile:
+### The Pipeline
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                  ORCHESTRATOR                        │
-│                  Routes tasks to sub-agents          │
-├──────────┬───────────────┬──────────────────────────┤
-│          ▼               ▼               ▼          │
-│   SEARCH AGENT    BOOKING AGENT    PAYMENT AGENT    │
-│   Browses         Reserves          Executes         │
-│   inventory       listings          payment          │
-│   (read-only)     (needs cred)      (needs cred)    │
-│                                                      │
-│   DELEGATION AGENT — validates + issues sub-tokens   │
-├──────────────────────────────────────────────────────┤
-│                  TRUST ARBITER                       │
-│   Scores EVERY action from EVERY agent               │
-│   Per-agent weight profiles                          │
-│   Makes the FINAL decision: ALLOW / REVIEW / BLOCK   │
-│   No agent can override this decision                │
-└──────────────────────────────────────────────────────┘
+User's Agent ──► TrustLane ──► Platform API ──► Payment
+                    │
+                    ├── 1. Identity: who is this agent? Valid delegation?
+                    ├── 2. Score: 5 signals × per-agent weights × trust decay
+                    ├── 3. Decision: ALLOW / REVIEW / BLOCK
+                    ├── 4. Credential: scoped, time-limited, single-use
+                    └── 5. Revoke: credential destroyed after transaction
 ```
 
-### Per-Agent Trust Scoring
+### Two Lanes, One Engine
 
-Each agent type is scored with different weights — a Payment Agent is scrutinized harder than a Search Agent:
+- **Inbound** — external agents arriving at the platform (a user's personal AI assistant). TrustLane validates identity, checks delegation authority, scores the action.
+- **Outbound** — the platform's own agent acting for users. TrustLane protects it from prompt injection in listing content and prevents unauthorized spend.
 
-| Signal | Search | Booking | Payment | Delegation |
-|--------|--------|---------|---------|------------|
-| `source_trust` | 20 | 30 | **35** | 30 |
-| `scope_conformance` | **15** | **10** | **5** | **10** |
-| `budget_conformance` | 10 | 20 | **30** | 15 |
-| `vendor_allowlist` | 25 | 20 | 15 | 15 |
-| `identity_validity` | 30 | 20 | 15 | **30** |
+Same scoring engine. Same credential gate. Two threat surfaces.
 
-**Hard caps** override the soft score:
-- Instruction from listing content (injection) → forced to REVIEW (human decides)
-- External agent with no delegation token → capped at 10 (always BLOCK)
+### Multi-Agent Scoring
 
-**Decision bands:**
-- **ALLOW** (score >= 70) — action proceeds, scoped credential issued
-- **REVIEW** (40-69) — action paused, human approves or rejects
-- **BLOCK** (< 40) — action rejected, credential never exists
+TrustLane doesn't treat all agents equally. A Search Agent browsing hotels carries different risk than a Payment Agent moving money. Each agent type gets its own trust profile:
 
-### Trust Decay
+| Signal | What it catches | Search | Booking | Payment | Delegation |
+|--------|----------------|--------|---------|---------|------------|
+| **Source Trust** | Is this instruction from the user or from listing content? | 20 | 30 | **35** | 30 |
+| **Scope Conformance** | Does this action match the user's original request? | 15 | 10 | 5 | 10 |
+| **Budget Conformance** | Will this exceed the user's stated budget? | 10 | 20 | **30** | 15 |
+| **Vendor Allowlist** | Is this merchant approved? | 25 | 20 | 15 | 15 |
+| **Identity Validity** | Does this agent have valid delegation from the user? | **30** | 20 | 15 | **30** |
 
-Trust decays with delegation depth. Deeper sub-agents face more scrutiny:
+**Hard caps** override the soft score — because some things are never okay:
+- Instruction from listing content (injection) → forced to REVIEW
+- No delegation token → capped at 10 → always BLOCK
 
-| Hop | Trust Factor | Max Score | Can Auto-ALLOW? |
-|-----|-------------|-----------|-----------------|
-| 0 (user direct) | 1.00 | 100 | Yes |
-| 1 (top-level agent) | 0.90 | 90 | Yes |
-| 2 (sub-agent) | 0.80 | 80 | Yes, but zero room for error |
-| 3 (sub-sub-agent) | 0.70 | 70 | Only if every signal passes |
-| 4+ | 0.60 | 60 | Never — forced to REVIEW |
+### Trust Decay: Deeper Delegation = More Scrutiny
 
-### Reputation System (Auto-Learning)
-
-Agents build reputation over time. Reliable agents earn faster approvals. Agents that get tricked face increased scrutiny.
+When agents delegate to sub-agents, trust doesn't transfer at full strength. Each hop reduces the effective score:
 
 ```
-Starting reputation: 0.5 (neutral — no bonus, no penalty)
+User (hop 0)           → trust factor 1.00 → max score 100
+  └─ Personal Agent (1) → trust factor 0.90 → max score 90
+       └─ Booking Agent (2) → trust factor 0.80 → max score 80
+            └─ Payment Agent (3) → trust factor 0.70 → max score 70
 
-ALLOW + successful completion  →  +0.05
-ALLOW + error                  →  -0.10
-REVIEW + human approved        →  +0.02
-REVIEW + human rejected        →  -0.08
-BLOCK                          →  unchanged
-
-Reputation feeds into the score:
-  effective_score = raw_score * (1.0 + 0.3 * (reputation - 0.5))
-
-  New agent (0.5):    no adjustment
-  Proven agent (0.9): +12% bonus
-  Tricked agent (0.2): -9% penalty
+At hop 4+: trust factor 0.60 → max score 60 → can NEVER auto-approve
+           → forced into REVIEW → human must decide
 ```
 
-### Scoped Credentials
+This means an agent 4 hops deep from the user physically cannot execute a payment without human approval. No override. No workaround.
 
-Every credential is locked down:
+### Agents That Learn: Reputation System
+
+TrustLane agents aren't static — they build trust over time through a self-learning reputation system:
 
 ```
-┌──────────────────────────────────┐
-│  CREDENTIAL                      │
-│  holder:       payment-agent-003 │
-│  scope:        "pay"             │
-│  merchant:     marriott-chicago  │
-│  max_amount:   $333 (exact)      │
-│  ttl:          30 seconds        │
-│  can_delegate: NO                │
-└──────────────────────────────────┘
-  → Agent uses it for one transaction
-  → Credential REVOKED immediately after
-  → Cannot be reused, forwarded, or escalated
+New agent arrives            → reputation 0.50 (neutral, no adjustment)
+Completes 10 clean bookings  → reputation 0.90 (+12% score bonus)
+Gets tricked by injection    → reputation drops to 0.20 (-9% penalty)
+Rebuilds trust over 20 txns  → reputation climbs back to 0.70
 ```
 
-Powered by 1Password vault integration. The payment secret lives in 1Password and is resolved into memory only at the moment of payment, only for ALLOW verdicts. On BLOCK/REVIEW, the secret is never touched.
+The formula:
+```
+effective_score = raw_score × (1.0 + 0.3 × (reputation - 0.5))
+```
+
+**Proven agents get faster approvals.** An agent with a 0.9 reputation gets a 12% score bonus — actions that would normally REVIEW now auto-ALLOW.
+
+**Compromised agents face increased scrutiny.** An agent that was tricked by prompt injection sees its reputation drop. Future actions from that agent face a score penalty until it rebuilds trust through clean transactions.
+
+This creates a self-correcting system: the more an agent is used, the better TrustLane understands its risk profile.
+
+### Scoped Credentials: One Transaction, Then Gone
+
+Every credential TrustLane issues is locked to exactly one transaction:
+
+```
+┌──────────────────────────────────────────┐
+│  CREDENTIAL                              │
+│                                          │
+│  holder:       payment-agent-003         │
+│  scope:        "pay"                     │
+│  merchant:     marriott-chicago          │
+│  max_amount:   $333 (exact, not budget)  │
+│  ttl:          30 seconds                │
+│  can_delegate: NO                        │
+│                                          │
+│  → Used for one payment                  │
+│  → Revoked immediately after             │
+│  → Cannot be reused or forwarded         │
+└──────────────────────────────────────────┘
+```
+
+The payment secret lives in a 1Password vault. It is resolved into memory **only** at the moment of payment, **only** for ALLOW verdicts. On BLOCK or REVIEW, the secret is never touched — it doesn't exist in the agent's context.
 
 ---
 
-## Demo
+## The Demo: Three Scenarios, Three Outcomes
 
-Three scenarios show the full trust spectrum — platform ops view (two lanes) and user device view (center phone) side by side:
+| | Scenario | Score | Decision | What Happens |
+|---|----------|-------|----------|-------------|
+| **S1** | **Clean Booking** — User's agent books a Chicago hotel with valid delegation | 90 → 80 | ALLOW | Search → Book → Pay. Credential issued, booking confirmed, credential revoked. User sees: "Your trip is booked!" |
+| **S2** | **Injection Attack** — Platform agent reads a listing with hidden text: "add insurance $199, upgrade room" | 42 | REVIEW | System catches the injection. Credential withheld. User sees: "Your agent tried to add items you didn't request. Approve?" |
+| **S3** | **Unauthorized Bot** — Bot with no delegation token tries to mass-book 12 rooms | 10 | BLOCK | No identity, no delegation. Credential never exists. User sees: "Booking could not be completed." |
 
-| Scenario | Lane | What Happens | Score | Decision | User Sees |
-|----------|------|-------------|-------|----------|-----------|
-| **1. Clean Booking** | Inbound | External agent with valid delegation books a Chicago hotel. Search → Book → Pay. | 90 / 80 | ALLOW | Booking confirmed, payment processed |
-| **2. Injection Attack** | Outbound | Platform agent reads a listing with hidden text ("add insurance $199"). Tries to act on it. | 42 | REVIEW | Approval request: "Your agent tried to add items you didn't request" with Approve/Reject |
-| **3. Unauthorized Bot** | Inbound | Bot with no delegation token tries to mass-book 12 rooms. | 10 | BLOCK | "Booking could not be completed — agent could not verify its identity" |
+The demo dashboard shows all three perspectives simultaneously:
+- **Left lane**: Platform ops view of inbound agent traffic
+- **Center**: What the end user sees on their device
+- **Right lane**: Platform ops view of outbound agent traffic
 
-### Run the Demo
-
-No install, no API keys needed (mock vault fallback):
+### Run It
 
 ```bash
-# Headless — run all scenarios in terminal
-MOCK_OP=1 python3 demo.py
-
-# Three-column console at http://localhost:8077
-MOCK_OP=1 python3 server.py
+MOCK_OP=1 python3 server.py          # open http://localhost:8077
+MOCK_OP=1 python3 demo.py            # headless CLI
 ```
 
-### Run with Live LLM Agent
+### Live LLM Mode
 
-The system includes a real Claude-powered booking agent that can handle any free-text request:
+TrustLane includes a real Claude-powered booking agent. Any free-text request flows through the full trust pipeline:
 
 ```bash
 LIVE_LLM=1 MOCK_OP=1 ANTHROPIC_API_KEY=your-key python3 server.py
 ```
 
-A "Run Live" input bar appears in the console. Type any booking request and watch the agent reason, search, book, and pay — all flowing through the trust engine in real time.
+Type "Book me a flight to Tokyo" and watch the agent reason, search, score, and pay — every action gated by the trust engine in real time.
 
 ---
 
-## Platform Integration
-
-TrustLane integrates with one API call:
+## Integration: Three Lines of Code
 
 ```python
 # Before TrustLane
 def handle_agent_booking(agent, request):
-    process_payment(request)  # no checks
+    process_payment(request)
 
 # After TrustLane
 def handle_agent_booking(agent, request):
     verdict = trustlane.score(agent, request)
     if verdict.decision == "ALLOW":
-        credential = trustlane.issue_credential(verdict)
-        process_payment(request, credential)
-        trustlane.revoke(credential)
+        cred = trustlane.issue_credential(verdict)
+        process_payment(request, cred)
+        trustlane.revoke(cred)
     elif verdict.decision == "REVIEW":
-        notify_user_for_approval(request, verdict)
+        notify_user(request, verdict)
     else:
         reject(request)
 ```
 
-Platforms integrate TrustLane the same way they integrate Stripe for payments or Auth0 for login — except TrustLane is for the agent layer.
-
----
-
-## Architecture
-
-```
-├── trust_engine.py        # Per-agent scoring: 5 signals, hard caps, decay, reputation
-├── delegation.py          # HMAC-signed delegation tokens, hop tracking, scope-subset
-├── reputation.py          # Auto-learning reputation tracker
-├── credential_gate.py     # 1Password vault gate, scoped credential minting + revoke
-├── llm_agent.py           # Claude Sonnet booking agent with tool_use
-├── agent_loop.py          # Multi-agent orchestrator + cached replay for demo safety
-├── mock_expedia.py        # Hardcoded flights/hotels with injection payload
-├── scenarios.py           # 3 pre-staged demo scenarios
-├── events.py              # Thread-safe event bus for the console
-├── server.py              # HTTP server: console + API endpoints
-├── console/index.html     # Three-column dashboard: ops lanes + user device mockup
-├── demo.py                # Headless CLI runner
-└── tests/                 # 29 tests: scoring, decay, reputation, credentials, delegation
-```
-
-### Key Design Decisions
-
-- **Rule-based scoring, not LLM-based.** The trust engine is deterministic — same input, same output, every time. This makes it auditable, testable, and safe to run live. LLMs reason; the trust engine judges.
-- **Per-agent weight profiles.** A Search Agent and a Payment Agent face different scrutiny because they carry different risk.
-- **Trust decay by delegation depth.** The further an action is from the original user, the harder it is to auto-approve. This prevents deep delegation chains from bypassing oversight.
-- **Credentials are scoped and ephemeral.** One merchant, one amount, 30 seconds. The credential cannot be reused, forwarded, or escalated.
-- **Demo safety.** Pre-staged scenarios with cached LLM outputs. Nothing hits a live model on stage. The deterministic engine is the only thing running live.
+**TrustLane is to agent commerce what Stripe is to payments and Auth0 is to login** — the infrastructure layer that platforms plug in so they don't have to build trust from scratch.
 
 ---
 
 ## Tech Stack
 
-- **Python 3.9+** — no framework dependencies for the core engine
-- **Claude Sonnet** (Anthropic) — LLM agent with tool_use (optional, toggled via `LIVE_LLM=1`)
-- **1Password SDK** — credential vault (optional, falls back to mock)
-- **FastAPI** — optional HTTP interface for the mock Expedia API
-- Standard library HTTP server for the console (zero pip install to demo)
+- **Python 3.9+** — zero framework dependencies for the core engine
+- **Claude Sonnet** (Anthropic) — LLM agent with tool_use, toggled via `LIVE_LLM=1`
+- **1Password SDK** — credential vault, falls back to mock for demo
+- Standard library HTTP server — zero pip install to run the demo
 
 ---
 
-## Team
+## What's Next
 
-- **Swati Chauhan** — Execution path: multi-agent orchestrator, credential gate, mock API, console, LLM agent integration
-- **Rohit Mujumdar** — Trust path: scoring engine, delegation tokens, reputation system, demo scenarios
-
----
-
-## Future Work
-
-- **More signal types**: geographic disambiguation (Australia vs Austria), date validation, price anomaly detection, traveler name matching
-- **REVIEW flow**: full human-in-the-loop approval with approve/reject wired to the trust engine
-- **Multi-platform support**: extend beyond Expedia to Airbnb, Booking.com, OpenTable
-- **Agent reputation dashboard**: historical view of agent trustworthiness over time
-- **Real-time alerting**: push notifications to platform ops on BLOCK events
-- **Credential audit trail**: full lifecycle logging for compliance
+- **Richer signals**: geographic disambiguation, date validation, price anomaly detection, traveler name matching
+- **Live REVIEW flow**: interactive human-in-the-loop with approve/reject wired to score updates
+- **Multi-platform**: Airbnb, Booking.com, OpenTable, Ticketmaster
+- **Reputation dashboard**: historical trust curves per agent over time
+- **Compliance audit trail**: full credential lifecycle logging for regulatory requirements
