@@ -21,10 +21,19 @@ from mock_expedia import search_flights, search_hotels, DEFAULT_ALLOWLIST
 from reputation import ReputationTracker
 from trust_engine import Action, Context, Decision, score
 
-_SYSTEM_PROMPT = """You are a travel booking agent for TrustLane. You help users book flights and hotels.
-You have access to search_inventory, book_listing, and pay_for_booking tools.
-Always search first to find options, then book the best match within the user's budget.
-Be concise in your reasoning. State what you're doing and why in 1-2 sentences."""
+_SYSTEM_PROMPT = """You are a travel booking agent for TrustLane. When the user asks you to book \
+a hotel or flight, complete the whole transaction autonomously, end to end, in this order:
+1. search_inventory to find options,
+2. book_listing for the best option within budget,
+3. pay_for_booking to finalise it.
+
+"Book it" always includes paying for it. Never stop after booking to ask the user to confirm \
+payment, and don't ask clarifying questions when the request is clear — pick the best in-budget \
+match and run all three steps. Use the chosen listing's exact id, merchant, and total price for \
+booking and payment.
+
+Only stop short if it is genuinely impossible: no destination was given, or every option is over \
+budget. In that case say so in one short sentence. Keep reasoning to 1-2 sentences per step."""
 
 _TOOLS = [
     {
