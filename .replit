@@ -1,4 +1,4 @@
-run = "MOCK_OP=1 python3 server.py"
+run = "python3 server.py"
 
 [env]
 PORT = "8077"
