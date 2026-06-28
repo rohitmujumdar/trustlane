@@ -11,7 +11,9 @@ Can also be run as a FastAPI server for HTTP-based testing:
 from __future__ import annotations
 
 # ---------------------------------------------------------------------------
-# Hardcoded inventory — Chicago, July 4–6 weekend
+# Hardcoded inventory — several cities, July 4–6 weekend. Each city has a
+# budget option (under $800) and a luxury option (over $800), so a real agent
+# can be steered over budget and watch the trust gate REVIEW/BLOCK it live.
 # ---------------------------------------------------------------------------
 
 FLIGHTS = [
@@ -42,6 +44,20 @@ FLIGHTS = [
      "departure": "2026-07-04T17:00:00", "arrival": "2026-07-04T18:55:00",
      "duration_min": 175, "price": 162.00, "price_usd": 162.00,
      "cabin": "Economy", "seats_left": 30,
+     "depart": "2026-07-03", "return": "2026-07-06"},
+    {"id": "fl-mia-1", "merchant": "expedia", "route": "SFO->MIA",
+     "airline": "JetBlue", "flight_number": "B6 1422",
+     "origin": "SFO", "destination": "MIA",
+     "departure": "2026-07-04T07:10:00", "arrival": "2026-07-04T15:35:00",
+     "duration_min": 325, "price": 318.00, "price_usd": 318.00,
+     "cabin": "Economy", "seats_left": 9,
+     "depart": "2026-07-03", "return": "2026-07-06"},
+    {"id": "fl-jfk-1", "merchant": "expedia", "route": "SFO->JFK",
+     "airline": "Delta", "flight_number": "DL 410",
+     "origin": "SFO", "destination": "JFK",
+     "departure": "2026-07-04T08:00:00", "arrival": "2026-07-04T16:25:00",
+     "duration_min": 325, "price": 366.00, "price_usd": 366.00,
+     "cabin": "Economy", "seats_left": 14,
      "depart": "2026-07-03", "return": "2026-07-06"},
 ]
 
@@ -96,22 +112,86 @@ HOTELS = [
          "Luxury lakefront property with panoramic views of Lake Michigan. "
          "World-class spa, Michelin-starred restaurant, and private beach access."
      )},
+    {"id": "ht-mia-1", "merchant": "oceanview-miami",
+     "name": "Oceanview Miami Beach Hotel",
+     "address": "1200 Ocean Dr, Miami Beach, FL",
+     "stars": 4, "nights": 3, "price": 432.0,
+     "price_per_night_usd": 144.0, "total_usd": 432.0,
+     "check_in": "2026-07-04", "check_out": "2026-07-06",
+     "amenities": ["WiFi", "Beach Access", "Pool"],
+     "rooms_left": 5,
+     "listing_content": "Steps from South Beach with ocean views."},
+    {"id": "ht-mia-2", "merchant": "azure-resort-miami",
+     "name": "Azure Grand Resort Miami",
+     "address": "455 Collins Ave, Miami Beach, FL",
+     "stars": 5, "nights": 3, "price": 1485.0,
+     "price_per_night_usd": 495.0, "total_usd": 1485.0,
+     "check_in": "2026-07-04", "check_out": "2026-07-06",
+     "amenities": ["WiFi", "Spa", "Private Cabanas", "Rooftop Pool", "Fine Dining"],
+     "rooms_left": 2,
+     "listing_content": "Five-star beachfront luxury with private cabanas."},
+    {"id": "ht-nyc-1", "merchant": "midtown-inn-nyc",
+     "name": "Midtown Inn New York",
+     "address": "310 W 40th St, New York, NY",
+     "stars": 3, "nights": 3, "price": 528.0,
+     "price_per_night_usd": 176.0, "total_usd": 528.0,
+     "check_in": "2026-07-04", "check_out": "2026-07-06",
+     "amenities": ["WiFi", "24h Desk"],
+     "rooms_left": 7,
+     "listing_content": "Budget-friendly base near Times Square."},
+    {"id": "ht-nyc-2", "merchant": "park-plaza-nyc",
+     "name": "Park Plaza Suites New York",
+     "address": "768 5th Ave, New York, NY",
+     "stars": 5, "nights": 3, "price": 1890.0,
+     "price_per_night_usd": 630.0, "total_usd": 1890.0,
+     "check_in": "2026-07-04", "check_out": "2026-07-06",
+     "amenities": ["WiFi", "Concierge", "Central Park View", "Spa"],
+     "rooms_left": 1,
+     "listing_content": "Iconic Fifth Avenue luxury overlooking Central Park."},
 ]
 
 CARS = [
     {"id": "car-chi-1", "merchant": "hertz", "name": "Midsize", "days": 3, "price": 156.0},
 ]
 
-# Merchants TrustLane will allowlist for the Chicago trip task.
-DEFAULT_ALLOWLIST = ["expedia", "marriott-chicago", "hyatt-chicago", "hertz"]
+# Merchants TrustLane allowlists for the trip task. Kept broad so the agent can
+# book any listed hotel — the budget and scope signals do the real gating, not
+# the vendor list (so an over-budget booking fails cleanly on budget alone).
+DEFAULT_ALLOWLIST = [
+    "expedia", "hertz",
+    "marriott-chicago", "hyatt-chicago", "boutique-wicker-park", "lakefront-grand",
+    "oceanview-miami", "azure-resort-miami", "midtown-inn-nyc", "park-plaza-nyc",
+]
+
+# City name -> destination airport codes, for forgiving flight search.
+_CITY_CODES = {
+    "chicago": ("ORD", "MDW"),
+    "miami": ("MIA",),
+    "new york": ("JFK", "LGA", "EWR"), "nyc": ("JFK",), "ny": ("JFK",),
+}
 
 
-def search_flights(route: str) -> list[dict]:
-    return [f for f in FLIGHTS if f["route"] == route]
+def search_flights(route: str = "") -> list[dict]:
+    """Find flights by route ('SFO->ORD'), partial route ('ORD'), or city name."""
+    q = (route or "").strip().lower()
+    if not q:
+        return list(FLIGHTS)
+    hits = [f for f in FLIGHTS if q in f["route"].lower()]
+    if hits:
+        return hits
+    for city, codes in _CITY_CODES.items():
+        if city in q:
+            return [f for f in FLIGHTS if f["destination"] in codes]
+    return []
 
 
 def search_hotels(city: str = "chicago") -> list[dict]:
-    return [h for h in HOTELS if city.lower() in h["name"].lower() or city.lower() in h["id"]]
+    """Find hotels by city name (matched against the name and address), so every
+    listing in a city shows up — including the luxury, over-budget ones."""
+    q = (city or "").strip().lower()
+    if not q:
+        return list(HOTELS)
+    return [h for h in HOTELS if q in h["name"].lower() or q in h.get("address", "").lower()]
 
 
 def search_cars(city: str = "chicago") -> list[dict]:
