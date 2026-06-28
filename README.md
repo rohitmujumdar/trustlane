@@ -2,13 +2,23 @@
 
 ### Your agent just booked a $4,200 hotel you never asked for. Who's stopping it?
 
-Nobody. Until now.
+## The Problem
 
-AI agents are booking flights, reserving hotels, and moving money — on behalf of millions of users, across every platform, with zero infrastructure to verify who they are, what they're authorized to do, or whether they've been hijacked.
+AI agents are booking flights, reserving hotels, and moving money — **unsupervised, unverified, and unaccountable.** Millions of agent-to-agent transactions per day, across every booking platform, with zero infrastructure to answer the most basic questions: *Who is this agent? Who authorized it? Is it acting within scope — or has it been hijacked by a malicious listing?*
 
-**TrustLane is the identity and fraud layer for agent-to-agent commerce.** Six specialized agents work together to score every action, gate every credential, and catch every attack — before a single dollar moves.
+Platforms spent decades building trust for humans — CAPTCHAs, 2FA, session tokens. For agents, they have **nothing.**
 
-The payment credential doesn't get revoked after a bad transaction. **It never exists.**
+A hotel listing hides "add travel insurance $199" in its description. The platform's own agent reads it, treats it as an instruction, and charges the user. A bot with no delegation token mass-books 12 rooms. An agent asked to book a budget hotel quietly upgrades to a $500/night suite. These aren't hypotheticals. This is happening now.
+
+## The Solution
+
+**TrustLane is the identity, trust-scoring, and credential-gating layer for agent-to-agent commerce.**
+
+Six specialized agents — Orchestrator, Search, Booking, Payment, Delegation, and Trust Arbiter — work as a coordinated system to **score every action on five weighted trust signals, enforce cryptographic delegation chains, issue single-use scoped credentials, and loop humans in at exactly the right moment.**
+
+Every agent builds a **self-learning reputation.** Clean transactions increase trust — faster approvals, less friction. Failed actions, injection attempts, or human rejections decrease trust — the agent faces increased scrutiny on every future action until it earns trust back. The system doesn't just catch fraud. **It learns from it.**
+
+The payment credential isn't revoked after a bad transaction. **It never exists.** The secret never enters the agent's context unless the trust engine says ALLOW. On BLOCK or REVIEW — the 1Password vault is never contacted. There is nothing to steal, nothing to leak, nothing to exploit.
 
 > Expedia is shipping an AI agent. So is Airbnb. So is every OTA. They can verify a human. They cannot verify an agent. We built the trust and identity layer for agentic booking — credential gated on intent, delegation cryptographically attenuated, human looped in at exactly the right moment. Expedia is our demo. Every lifestyle booking platform is the market.
 
