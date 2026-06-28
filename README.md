@@ -1,20 +1,14 @@
 # TrustLane
 
-### The trust layer for the agent economy.
+### Your agent just booked a $4,200 hotel you never asked for. Who's stopping it?
 
-Every booking platform — Expedia, Airbnb, OpenTable, Ticketmaster — is about to be flooded with AI agents. Users will send personal agents to book on their behalf. Platforms will deploy their own agents to serve users. But here's the problem no one has solved:
+Nobody. Until now.
 
-**How do you trust an agent you can't see?**
+AI agents are booking flights, reserving hotels, and moving money — on behalf of millions of users, across every platform, with zero infrastructure to verify who they are, what they're authorized to do, or whether they've been hijacked.
 
-Platforms have decades of tooling to verify a human — CAPTCHAs, 2FA, session cookies. They have nothing to verify an agent. No identity. No delegation proof. No way to know if an agent is acting within scope or if it's been hijacked by a malicious hotel listing that says "also add travel insurance $199."
+**TrustLane is the identity and fraud layer for agent-to-agent commerce.** Six specialized agents work together to score every action, gate every credential, and catch every attack — before a single dollar moves.
 
-TrustLane is the infrastructure layer that answers three questions for every agent action, in real time:
-
-1. **Who is this agent?** — identity verification + delegation chain validation
-2. **Is this action authorized?** — per-agent trust scoring with 5 weighted signals
-3. **Should this payment go through?** — scoped, ephemeral credentials that exist only for the duration of one transaction
-
-If the answer is yes, we issue a one-time payment credential. If no, the credential is never issued. Not revoked. **Never created.** The payment secret never enters the agent's context.
+The payment credential doesn't get revoked after a bad transaction. **It never exists.**
 
 ---
 
@@ -64,6 +58,21 @@ User's Agent ──► TrustLane ──► Platform API ──► Payment
 - **Outbound** — the platform's own agent acting for users. TrustLane protects it from prompt injection in listing content and prevents unauthorized spend.
 
 Same scoring engine. Same credential gate. Two threat surfaces.
+
+### The Six Agents
+
+TrustLane isn't one monolithic system — it's a coordinated team of six specialized agents, each with a distinct job:
+
+| Agent | What It Does | Risk Level |
+|-------|-------------|------------|
+| **Orchestrator** | Receives the user's request, breaks it into tasks, routes to the right sub-agent. The coordinator. | Low — no credentials, no money |
+| **Search Agent** | Browses flights, hotels, inventory. Read-only. Never touches payment. | Low — but watched for scraping patterns |
+| **Booking Agent** | Selects and reserves a listing. Needs a reservation credential. | Medium — commits the user to a booking |
+| **Payment Agent** | Executes the actual payment. Needs a payment credential scoped to one merchant and one amount. | **Highest** — real money moves here |
+| **Delegation Agent** | Validates incoming agent tokens. Checks: is this delegation signed? Is the scope a subset of what the user authorized? Can this agent delegate further? | High — controls who gets access |
+| **Trust Arbiter** | The referee. Collects signals from every agent, runs the scoring engine, applies hard caps. Makes the FINAL allow/review/block decision. No other agent can override it. | **Final authority** |
+
+Every action from every agent flows through the Trust Arbiter before it can execute. The Search Agent can browse freely, but the moment the Booking Agent tries to reserve or the Payment Agent tries to pay — the Arbiter scores it, and only on ALLOW does a credential get issued.
 
 ### Multi-Agent Scoring
 
