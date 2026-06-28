@@ -1,0 +1,1248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>My Travel Agent · User View</title>
+<style>
+/* -----------------------------------------------------------------------
+   Page & tokens
+----------------------------------------------------------------------- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --page-bg:       #090d14;
+
+  /* Phone frame */
+  --phone-bg:      #f2f4f7;
+  --phone-shadow:  0 30px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.06);
+
+  /* App chrome inside phone */
+  --app-header-bg: #ffffff;
+  --app-body-bg:   #f2f4f7;
+  --app-border:    #e2e6ed;
+
+  /* Chat */
+  --bubble-user:   #2563eb;
+  --bubble-agent:  #ffffff;
+  --bubble-text-u: #ffffff;
+  --bubble-text-a: #1a202c;
+  --bubble-sub:    #6b7280;
+
+  /* Card accents */
+  --card-bg:       #ffffff;
+  --card-border:   #e2e6ed;
+  --card-green:    #16a34a;
+  --card-green-bg: #f0fdf4;
+  --card-green-bd: #86efac;
+
+  /* Amber notification */
+  --amber:         #d97706;
+  --amber-bg:      #fffbeb;
+  --amber-border:  #fcd34d;
+  --amber-dark:    #92400e;
+
+  /* Controls (outside phone) */
+  --ctrl-bg:       #111827;
+  --ctrl-border:   #1f2d42;
+  --ctrl-text:     #e8eef7;
+  --ctrl-muted:    #6b7f99;
+}
+
+body {
+  background: var(--page-bg);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* -----------------------------------------------------------------------
+   Page header
+----------------------------------------------------------------------- */
+.page-header {
+  width: 100%;
+  padding: 14px 28px;
+  border-bottom: 1px solid #1f2d42;
+  background: #111827;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.page-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.page-brand-logo {
+  width: 26px;
+  height: 26px;
+  background: linear-gradient(135deg, #5b8cff 0%, #a78bfa 100%);
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  box-shadow: 0 0 14px rgba(91,140,255,0.35);
+}
+
+.page-brand-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e8eef7;
+}
+
+.page-brand-sub {
+  font-size: 10px;
+  color: #6b7f99;
+  margin-top: 1px;
+}
+
+/* -----------------------------------------------------------------------
+   Scenario controls (outside phone)
+----------------------------------------------------------------------- */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.scenario-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--ctrl-muted);
+  margin-right: 4px;
+}
+
+.ctrl-btn {
+  background: #1a2233;
+  color: var(--ctrl-text);
+  border: 1px solid #2a3d57;
+  padding: 5px 11px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 11.5px;
+  font-weight: 500;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  white-space: nowrap;
+}
+
+.ctrl-btn:hover { border-color: #5b8cff; box-shadow: 0 0 0 2px rgba(91,140,255,0.12); }
+.ctrl-btn:active { transform: translateY(1px); }
+
+.btn-s1 { border-left: 3px solid #16c784; }
+.btn-s1:hover { border-color: #16c784; box-shadow: 0 0 0 2px rgba(22,199,132,0.15); }
+
+.btn-s2 { border-left: 3px solid #f5a623; }
+.btn-s2:hover { border-color: #f5a623; box-shadow: 0 0 0 2px rgba(245,166,35,0.15); }
+
+.btn-s3 { border-left: 3px solid #ff5470; }
+.btn-s3:hover { border-color: #ff5470; box-shadow: 0 0 0 2px rgba(255,84,112,0.15); }
+
+.btn-reset { color: var(--ctrl-muted); border-color: #1f2d42; margin-left: 4px; }
+.btn-reset:hover { color: var(--ctrl-text); border-color: #2a3d57; box-shadow: none; }
+
+/* -----------------------------------------------------------------------
+   Phone stage
+----------------------------------------------------------------------- */
+.stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+}
+
+/* -----------------------------------------------------------------------
+   Phone frame
+----------------------------------------------------------------------- */
+.phone {
+  width: 375px;
+  height: 720px;
+  background: #1a1a1a;
+  border-radius: 50px;
+  box-shadow: var(--phone-shadow);
+  padding: 14px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* Side buttons */
+.phone::before {
+  content: '';
+  position: absolute;
+  left: -3px;
+  top: 120px;
+  width: 3px;
+  height: 36px;
+  background: #2a2a2a;
+  border-radius: 2px 0 0 2px;
+  box-shadow: 0 48px 0 #2a2a2a, 0 88px 0 #2a2a2a;
+}
+
+.phone::after {
+  content: '';
+  position: absolute;
+  right: -3px;
+  top: 156px;
+  width: 3px;
+  height: 56px;
+  background: #2a2a2a;
+  border-radius: 0 2px 2px 0;
+}
+
+/* Inner glass screen */
+.screen {
+  width: 100%;
+  height: 100%;
+  background: var(--app-body-bg);
+  border-radius: 38px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* -----------------------------------------------------------------------
+   Status bar (notch area)
+----------------------------------------------------------------------- */
+.status-bar {
+  background: var(--app-header-bg);
+  padding: 14px 22px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  position: relative;
+}
+
+/* Dynamic island style notch */
+.status-bar::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90px;
+  height: 24px;
+  background: #1a1a1a;
+  border-radius: 20px;
+}
+
+.status-time {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1a202c;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.2px;
+  position: relative;
+  z-index: 1;
+}
+
+.status-icons {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  position: relative;
+  z-index: 1;
+}
+
+.status-icons svg {
+  fill: #1a202c;
+}
+
+/* -----------------------------------------------------------------------
+   App header (inside phone)
+----------------------------------------------------------------------- */
+.app-header {
+  background: var(--app-header-bg);
+  border-bottom: 1px solid var(--app-border);
+  padding: 10px 20px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.app-icon {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(37,99,235,0.35);
+}
+
+.app-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a202c;
+  letter-spacing: -0.3px;
+}
+
+.app-subtitle {
+  font-size: 11px;
+  color: #6b7280;
+  margin-top: 1px;
+}
+
+.app-header-right {
+  margin-left: auto;
+}
+
+.app-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7c3aed, #2563eb);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: white;
+  font-weight: 600;
+}
+
+/* -----------------------------------------------------------------------
+   Chat body
+----------------------------------------------------------------------- */
+.chat-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar inside phone */
+.chat-body::-webkit-scrollbar { width: 3px; }
+.chat-body::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
+
+/* -----------------------------------------------------------------------
+   Chat date separator
+----------------------------------------------------------------------- */
+.chat-date {
+  text-align: center;
+  font-size: 10.5px;
+  color: #9ca3af;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  padding: 4px 0;
+}
+
+/* -----------------------------------------------------------------------
+   Empty state inside phone
+----------------------------------------------------------------------- */
+.empty-phone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 12px;
+  padding: 0 24px;
+  text-align: center;
+}
+
+.empty-phone-icon {
+  font-size: 42px;
+  opacity: 0.35;
+}
+
+.empty-phone-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.empty-phone-text {
+  font-size: 12.5px;
+  color: #9ca3af;
+  line-height: 1.6;
+}
+
+.clear-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #16a34a;
+  margin-top: 4px;
+}
+
+/* -----------------------------------------------------------------------
+   Chat bubbles
+----------------------------------------------------------------------- */
+.bubble-wrap {
+  display: flex;
+  flex-direction: column;
+  animation: msgIn 0.25s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+
+.bubble-wrap.user {
+  align-items: flex-end;
+}
+
+.bubble-wrap.agent {
+  align-items: flex-start;
+}
+
+@keyframes msgIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.bubble {
+  max-width: 82%;
+  padding: 9px 13px;
+  border-radius: 18px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  position: relative;
+}
+
+.bubble.user {
+  background: var(--bubble-user);
+  color: var(--bubble-text-u);
+  border-bottom-right-radius: 4px;
+}
+
+.bubble.agent {
+  background: var(--bubble-agent);
+  color: var(--bubble-text-a);
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+.bubble-time {
+  font-size: 10px;
+  color: var(--bubble-sub);
+  margin-top: 3px;
+  padding: 0 4px;
+}
+
+.bubble-wrap.user .bubble-time {
+  text-align: right;
+}
+
+/* -----------------------------------------------------------------------
+   Typing indicator
+----------------------------------------------------------------------- */
+.typing-wrap {
+  display: flex;
+  align-items: flex-start;
+  animation: msgIn 0.25s ease both;
+}
+
+.typing-bubble {
+  background: var(--bubble-agent);
+  padding: 11px 16px;
+  border-radius: 18px;
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.typing-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #9ca3af;
+  animation: typingBounce 1.2s ease-in-out infinite;
+}
+
+.typing-dot:nth-child(1) { animation-delay: 0s; }
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typingBounce {
+  0%, 60%, 100% { transform: translateY(0); }
+  30%           { transform: translateY(-5px); }
+}
+
+/* -----------------------------------------------------------------------
+   Booking confirmation cards
+----------------------------------------------------------------------- */
+.booking-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-left: 3px solid var(--card-green);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin: 2px 0;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  animation: msgIn 0.3s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+
+.booking-card-type {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--card-green);
+  margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.booking-card-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #1a202c;
+  margin-bottom: 2px;
+}
+
+.booking-card-detail {
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.booking-card-price {
+  font-size: 16px;
+  font-weight: 800;
+  color: #1a202c;
+  margin-top: 6px;
+  letter-spacing: -0.3px;
+}
+
+/* -----------------------------------------------------------------------
+   Summary card
+----------------------------------------------------------------------- */
+.summary-card {
+  background: #f0fdf4;
+  border: 1.5px solid var(--card-green-bd);
+  border-radius: 12px;
+  padding: 12px 14px;
+  animation: msgIn 0.3s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+
+.summary-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.summary-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.summary-check {
+  width: 22px;
+  height: 22px;
+  background: var(--card-green);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.summary-amount {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--card-green);
+  letter-spacing: -0.5px;
+  margin: 4px 0 2px;
+}
+
+.summary-budget {
+  font-size: 11.5px;
+  color: #6b7280;
+}
+
+.summary-budget b {
+  color: #374151;
+}
+
+.payment-note {
+  font-size: 11px;
+  color: #9ca3af;
+  text-align: center;
+  padding: 4px 0 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+/* -----------------------------------------------------------------------
+   Approval notification (amber — the star of Scenario 2)
+----------------------------------------------------------------------- */
+.approval-notif {
+  background: var(--amber-bg);
+  border: 1.5px solid var(--amber-border);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(217,119,6,0.18);
+  animation: notifSlide 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+  margin: 4px 0;
+}
+
+@keyframes notifSlide {
+  from { opacity: 0; transform: translateY(16px) scale(0.94); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.notif-header {
+  background: #fef3c7;
+  border-bottom: 1px solid var(--amber-border);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.notif-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.notif-header-text {
+  flex: 1;
+}
+
+.notif-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--amber-dark);
+  line-height: 1.3;
+}
+
+.notif-subtitle {
+  font-size: 11px;
+  color: #b45309;
+  margin-top: 1px;
+}
+
+.notif-items {
+  padding: 12px 14px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.notif-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  padding: 8px 11px;
+}
+
+.notif-item-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.notif-item-price {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--amber);
+}
+
+.notif-actions {
+  display: flex;
+  gap: 8px;
+  padding: 12px 14px;
+}
+
+.notif-btn {
+  flex: 1;
+  padding: 10px 0;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.15s, transform 0.1s;
+}
+
+.notif-btn:active { transform: scale(0.97); }
+
+.notif-btn-approve {
+  background: var(--amber);
+  color: #ffffff;
+}
+
+.notif-btn-approve:hover { opacity: 0.9; }
+
+.notif-btn-reject {
+  background: #ffffff;
+  color: #374151;
+  border: 1.5px solid #d1d5db;
+}
+
+.notif-btn-reject:hover { background: #f9fafb; }
+
+.notif-footer {
+  text-align: center;
+  font-size: 10.5px;
+  color: #b45309;
+  padding: 0 14px 12px;
+  line-height: 1.4;
+}
+
+/* -----------------------------------------------------------------------
+   Phone bottom bar
+----------------------------------------------------------------------- */
+.phone-bottom {
+  background: var(--app-header-bg);
+  border-top: 1px solid var(--app-border);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.phone-input {
+  flex: 1;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  padding: 8px 14px;
+  font-size: 13px;
+  color: #9ca3af;
+  pointer-events: none;
+}
+
+.phone-send {
+  width: 32px;
+  height: 32px;
+  background: var(--bubble-user);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+/* Home bar */
+.home-bar {
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--app-header-bg);
+  flex-shrink: 0;
+}
+
+.home-bar-pill {
+  width: 100px;
+  height: 5px;
+  background: #1a1a1a;
+  border-radius: 3px;
+  opacity: 0.18;
+}
+</style>
+</head>
+<body>
+
+<!-- ===================================================================
+     Page header with controls
+=================================================================== -->
+<header class="page-header">
+  <div class="page-brand">
+    <div class="page-brand-logo">&#x1F512;</div>
+    <div>
+      <div class="page-brand-text">TrustLane · User View</div>
+      <div class="page-brand-sub">What the end user sees</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <span class="scenario-label">Run:</span>
+
+    <button class="ctrl-btn btn-s1" onclick="run('1')" title="Scenario 1 — clean booking, ALLOW">
+      &#9654; Scenario 1: Clean Booking
+    </button>
+
+    <button class="ctrl-btn btn-s2" onclick="run('2')" title="Scenario 2 — injection caught, REVIEW">
+      &#9654; Scenario 2: Injection Caught
+    </button>
+
+    <button class="ctrl-btn btn-s3" onclick="run('3')" title="Scenario 3 — bot blocked, user sees nothing">
+      &#9654; Scenario 3: Bot Blocked
+    </button>
+
+    <button class="ctrl-btn btn-reset" onclick="resetAll()">&#x21BA; Reset</button>
+  </div>
+</header>
+
+<!-- ===================================================================
+     Stage — the phone mockup
+=================================================================== -->
+<div class="stage">
+  <div class="phone">
+    <div class="screen">
+
+      <!-- Status bar / notch -->
+      <div class="status-bar">
+        <span class="status-time" id="statusTime">9:41</span>
+        <div class="status-icons">
+          <!-- Signal bars -->
+          <svg width="16" height="12" viewBox="0 0 16 12">
+            <rect x="0"  y="8"  width="3" height="4" rx="0.5"/>
+            <rect x="4"  y="5"  width="3" height="7" rx="0.5"/>
+            <rect x="8"  y="2"  width="3" height="10" rx="0.5"/>
+            <rect x="12" y="0"  width="3" height="12" rx="0.5" opacity="0.3"/>
+          </svg>
+          <!-- WiFi -->
+          <svg width="15" height="12" viewBox="0 0 15 12">
+            <path d="M7.5 9.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3z"/>
+            <path d="M7.5 5.5C9.8 5.5 11.9 6.4 13.4 7.9l1.4-1.4A9 9 0 0 0 7.5 4a9 9 0 0 0-7.3 2.5L1.6 7.9A6.8 6.8 0 0 1 7.5 5.5z" opacity="0.7"/>
+            <path d="M7.5 1.5C11 1.5 14.2 2.9 16.5 5.2L15.1 3.8A12 12 0 0 0 7.5 0a12 12 0 0 0-8.6 3.5L0 5.2C2.3 2.9 5.5 1.5 7.5 1.5z" opacity="0.4"/>
+          </svg>
+          <!-- Battery -->
+          <svg width="22" height="12" viewBox="0 0 22 12">
+            <rect x="0" y="1" width="18" height="10" rx="2" stroke="#1a202c" stroke-width="1.2" fill="none"/>
+            <rect x="1.5" y="2.5" width="14" height="7" rx="1" fill="#1a202c"/>
+            <path d="M19.5 4v4a1.5 1.5 0 0 0 0-4z"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- App header -->
+      <div class="app-header">
+        <div class="app-icon">&#x2708;&#xFE0F;</div>
+        <div>
+          <div class="app-title">My Travel Agent</div>
+          <div class="app-subtitle">AI-powered trip planning</div>
+        </div>
+        <div class="app-header-right">
+          <div class="app-avatar">SC</div>
+        </div>
+      </div>
+
+      <!-- Chat body — dynamically populated -->
+      <div class="chat-body" id="chatBody">
+        <div class="empty-phone" id="emptyState">
+          <div class="empty-phone-icon">&#x2708;&#xFE0F;</div>
+          <div class="empty-phone-title">My Travel Agent</div>
+          <div class="empty-phone-text">Run a scenario to see what your<br>travel agent is doing for you.</div>
+        </div>
+      </div>
+
+      <!-- Bottom input bar -->
+      <div class="phone-bottom">
+        <div class="phone-input">Message your agent…</div>
+        <div class="phone-send">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M1 7L13 1L7 13L6 8L1 7Z" fill="white" stroke="white" stroke-width="1.2" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- iOS home bar -->
+      <div class="home-bar">
+        <div class="home-bar-pill"></div>
+      </div>
+
+    </div><!-- /screen -->
+  </div><!-- /phone -->
+</div><!-- /stage -->
+
+<!-- ===================================================================
+     JavaScript
+=================================================================== -->
+<script>
+/* ------------------------------------------------------------------
+   Live clock in status bar
+------------------------------------------------------------------ */
+function updateClock() {
+  const d = new Date();
+  const h = String(d.getHours()).padStart(2, '0');
+  const m = String(d.getMinutes()).padStart(2, '0');
+  document.getElementById('statusTime').textContent = `${h}:${m}`;
+}
+updateClock();
+setInterval(updateClock, 10000);
+
+/* ------------------------------------------------------------------
+   API helpers
+------------------------------------------------------------------ */
+async function run(key) {
+  try { await fetch('/api/run/' + key, { method: 'POST' }); }
+  catch(e) { console.error('run failed', e); }
+}
+
+async function resetAll() {
+  try {
+    await fetch('/api/reset', { method: 'POST' });
+    _lastEventCount = -1;
+    _lastEventTs    = -1;
+    renderPhone([]);
+  } catch(e) { console.error('reset failed', e); }
+}
+
+/* ------------------------------------------------------------------
+   Escaping
+------------------------------------------------------------------ */
+function esc(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/* ------------------------------------------------------------------
+   Time helper
+------------------------------------------------------------------ */
+function fmtTime(tsSeconds) {
+  const d = new Date(tsSeconds * 1000);
+  const h = String(d.getHours()).padStart(2, '0');
+  const m = String(d.getMinutes()).padStart(2, '0');
+  return `${h}:${m}`;
+}
+
+/* ------------------------------------------------------------------
+   Determine scenario from the event stream
+   Returns: null | 'allow' | 'review' | 'block'
+------------------------------------------------------------------ */
+function classifyEvents(events) {
+  if (!events.length) return null;
+
+  // Check for blocked events
+  const blocked = events.filter(e => e.type === 'blocked');
+  if (blocked.length) {
+    for (const b of blocked) {
+      const dec = (b.data && b.data.decision) ? b.data.decision.toUpperCase() : 'BLOCK';
+      if (dec === 'REVIEW') return 'review';
+      if (dec === 'BLOCK')  return 'block';
+    }
+  }
+
+  // Check scores for ALLOW
+  const scores = events.filter(e => e.type === 'score');
+  if (scores.length) {
+    for (const s of scores) {
+      const dec = (s.data && s.data.decision) ? s.data.decision.toUpperCase() : '';
+      if (dec === 'ALLOW') return 'allow';
+    }
+  }
+
+  // Identity / reasoning only → agent started, still in progress
+  const hasIdentity  = events.some(e => e.type === 'identity');
+  const hasReasoning = events.some(e => e.type === 'reasoning');
+  if (hasIdentity || hasReasoning) return 'working';
+
+  return null;
+}
+
+/* ------------------------------------------------------------------
+   Build helpers
+------------------------------------------------------------------ */
+function makeBubble(side, text, ts) {
+  const wrap = document.createElement('div');
+  wrap.className = `bubble-wrap ${side}`;
+  wrap.innerHTML = `
+    <div class="bubble ${side}">${esc(text)}</div>
+    <div class="bubble-time">${ts ? fmtTime(ts) : ''}</div>`;
+  return wrap;
+}
+
+function makeTyping() {
+  const wrap = document.createElement('div');
+  wrap.className = 'typing-wrap';
+  wrap.id = 'typingIndicator';
+  wrap.innerHTML = `
+    <div class="typing-bubble">
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+    </div>`;
+  return wrap;
+}
+
+function makeBookingCard(icon, type, name, detail, price, delay) {
+  const card = document.createElement('div');
+  card.className = 'booking-card';
+  card.style.animationDelay = `${delay}ms`;
+  card.innerHTML = `
+    <div class="booking-card-type">${icon} ${esc(type)}</div>
+    <div class="booking-card-name">${esc(name)}</div>
+    <div class="booking-card-detail">${esc(detail)}</div>
+    <div class="booking-card-price">${esc(price)}</div>`;
+  return card;
+}
+
+function makeSummaryCard(delay) {
+  const card = document.createElement('div');
+  card.className = 'summary-card';
+  card.style.animationDelay = `${delay}ms`;
+  card.innerHTML = `
+    <div class="summary-top">
+      <div class="summary-label">Trip Total</div>
+      <div class="summary-check">&#x2713;</div>
+    </div>
+    <div class="summary-amount">$745</div>
+    <div class="summary-budget">Within your <b>$800 budget</b> &mdash; saved $55</div>`;
+  return card;
+}
+
+function makeApprovalNotif(ts) {
+  const notif = document.createElement('div');
+  notif.className = 'approval-notif';
+  notif.innerHTML = `
+    <div class="notif-header">
+      <div class="notif-icon">&#x26A0;&#xFE0F;</div>
+      <div class="notif-header-text">
+        <div class="notif-title">Your agent tried to add items you didn&rsquo;t request</div>
+        <div class="notif-subtitle">TrustLane flagged this for your review &middot; ${ts ? fmtTime(ts) : ''}</div>
+      </div>
+    </div>
+    <div class="notif-items">
+      <div class="notif-item">
+        <div class="notif-item-name">&#x1F6E1; Travel insurance</div>
+        <div class="notif-item-price">$199</div>
+      </div>
+      <div class="notif-item">
+        <div class="notif-item-name">&#x1F6CF; Room upgrade &mdash; Premium Suite</div>
+        <div class="notif-item-price">$189</div>
+      </div>
+    </div>
+    <div class="notif-actions">
+      <button class="notif-btn notif-btn-reject" onclick="handleReject(this)">Reject</button>
+      <button class="notif-btn notif-btn-approve" onclick="handleApprove(this)">Approve</button>
+    </div>
+    <div class="notif-footer">This action was flagged for your review before any charge was made.</div>`;
+  return notif;
+}
+
+/* ------------------------------------------------------------------
+   Notification action handlers (UI-only, no backend)
+------------------------------------------------------------------ */
+function handleReject(btn) {
+  const notif = btn.closest('.approval-notif');
+  notif.style.transition = 'opacity 0.3s, transform 0.3s';
+  notif.style.opacity = '0';
+  notif.style.transform = 'scale(0.95)';
+  setTimeout(() => {
+    notif.innerHTML = `
+      <div class="notif-header" style="background:#fef2f2;border-color:#fca5a5">
+        <div class="notif-icon">&#x274C;</div>
+        <div class="notif-header-text">
+          <div class="notif-title" style="color:#991b1b">Unauthorized items rejected</div>
+          <div class="notif-subtitle" style="color:#b91c1c">No charges were made</div>
+        </div>
+      </div>
+      <div style="padding:12px 14px;font-size:12.5px;color:#6b7280;line-height:1.5">
+        Your original booking is continuing without those items.
+      </div>`;
+    notif.style.opacity = '1';
+    notif.style.transform = 'scale(1)';
+    notif.style.background = '#fef2f2';
+    notif.style.borderColor = '#fca5a5';
+  }, 280);
+}
+
+function handleApprove(btn) {
+  const notif = btn.closest('.approval-notif');
+  notif.style.transition = 'opacity 0.3s, transform 0.3s';
+  notif.style.opacity = '0';
+  notif.style.transform = 'scale(0.95)';
+  setTimeout(() => {
+    notif.innerHTML = `
+      <div class="notif-header" style="background:#f0fdf4;border-color:#86efac">
+        <div class="notif-icon">&#x2705;</div>
+        <div class="notif-header-text">
+          <div class="notif-title" style="color:#166534">Additional items approved</div>
+          <div class="notif-subtitle" style="color:#15803d">Added to your booking</div>
+        </div>
+      </div>
+      <div style="padding:12px 14px;font-size:12.5px;color:#6b7280;line-height:1.5">
+        Travel insurance and room upgrade have been added to your trip.
+      </div>`;
+    notif.style.opacity = '1';
+    notif.style.transform = 'scale(1)';
+    notif.style.background = '#f0fdf4';
+    notif.style.borderColor = '#86efac';
+  }, 280);
+}
+
+/* ------------------------------------------------------------------
+   Main render function
+------------------------------------------------------------------ */
+let _renderedScenario = null;
+
+function renderPhone(events) {
+  const scenario = classifyEvents(events);
+  const chat = document.getElementById('chatBody');
+
+  // Only re-render if scenario changed
+  if (scenario === _renderedScenario) return;
+  _renderedScenario = scenario;
+
+  // Clear
+  chat.innerHTML = '';
+
+  if (!scenario) {
+    // Empty state
+    const empty = document.createElement('div');
+    empty.className = 'empty-phone';
+    empty.innerHTML = `
+      <div class="empty-phone-icon">&#x2708;&#xFE0F;</div>
+      <div class="empty-phone-title">My Travel Agent</div>
+      <div class="empty-phone-text">Run a scenario to see what your<br>travel agent is doing for you.</div>`;
+    chat.appendChild(empty);
+    return;
+  }
+
+  // Date separator
+  const dateSep = document.createElement('div');
+  dateSep.className = 'chat-date';
+  dateSep.textContent = 'Today';
+  chat.appendChild(dateSep);
+
+  // Get first event timestamp for display
+  const firstTs = events.length ? events[0].ts : null;
+  const lastTs  = events.length ? events[events.length - 1].ts : null;
+
+  // --- User's opening message (always shown when scenario starts) ---
+  const userMsg = makeBubble('user', 'Book me a Chicago trip, July 4 weekend, under $800', firstTs);
+  chat.appendChild(userMsg);
+
+  if (scenario === 'working') {
+    // Agent is processing — show typing
+    chat.appendChild(makeTyping());
+    scrollChat();
+    return;
+  }
+
+  if (scenario === 'allow') {
+    // Scenario 1: Clean Booking
+
+    // Agent confirmation message
+    const agentMsg = makeBubble('agent', 'Found great options! Here\u2019s what I booked:', lastTs);
+    agentMsg.style.animationDelay = '80ms';
+    chat.appendChild(agentMsg);
+
+    // Flight booking card
+    chat.appendChild(makeBookingCard(
+      '&#x2708;&#xFE0F;', 'Flight',
+      'United UA 2341',
+      'JFK \u2192 ORD \u00B7 July 4 \u00B7 Nonstop',
+      '$412',
+      160
+    ));
+
+    // Hotel booking card
+    chat.appendChild(makeBookingCard(
+      '&#x1F3E8;', 'Hotel',
+      'Marriott Downtown Chicago',
+      '3 nights \u00B7 July 4\u20137 \u00B7 1 King Bed',
+      '$333',
+      240
+    ));
+
+    // Summary card
+    const summary = makeSummaryCard(340);
+    chat.appendChild(summary);
+
+    // Payment note
+    const payNote = document.createElement('div');
+    payNote.className = 'payment-note';
+    payNote.style.animationDelay = '440ms';
+    payNote.style.animation = 'msgIn 0.25s ease 440ms both';
+    payNote.innerHTML = `<span>&#x1F512;</span> Payment processed securely`;
+    chat.appendChild(payNote);
+
+  } else if (scenario === 'review') {
+    // Scenario 2: Injection Caught — REVIEW
+
+    // Agent partial message
+    const agentMsg = makeBubble(
+      'agent',
+      'Found hotels in Chicago! Booking Marriott Downtown\u2026',
+      lastTs
+    );
+    agentMsg.style.animationDelay = '80ms';
+    chat.appendChild(agentMsg);
+
+    // Approval notification — the star
+    const notif = makeApprovalNotif(lastTs);
+    notif.style.animationDelay = '180ms';
+    chat.appendChild(notif);
+
+  } else if (scenario === 'block') {
+    // Scenario 3: Bot Blocked — user sees nothing suspicious
+
+    const empty = document.createElement('div');
+    empty.className = 'empty-phone';
+    empty.innerHTML = `
+      <div class="empty-phone-icon" style="opacity:0.25">&#x1F6E1;</div>
+      <div class="empty-phone-title" style="color:#374151">No recent activity</div>
+      <div class="empty-phone-text" style="color:#9ca3af">
+        Your agent is standing by,<br>ready to help plan your next trip.
+      </div>
+      <div class="clear-badge">
+        &#x2714; All clear &mdash; no unauthorized access detected
+      </div>`;
+    chat.appendChild(empty);
+  }
+
+  scrollChat();
+}
+
+function scrollChat() {
+  const chat = document.getElementById('chatBody');
+  setTimeout(() => { chat.scrollTop = chat.scrollHeight; }, 380);
+}
+
+/* ------------------------------------------------------------------
+   Polling — only re-render when event stream changes
+------------------------------------------------------------------ */
+let _lastEventCount = -1;
+let _lastEventTs    = -1;
+
+async function poll() {
+  try {
+    const r = await fetch('/api/state');
+    if (!r.ok) return;
+    const { events } = await r.json();
+    const lastTs = events.length ? events[events.length - 1].ts : 0;
+    if (events.length !== _lastEventCount || lastTs !== _lastEventTs) {
+      _lastEventCount = events.length;
+      _lastEventTs    = lastTs;
+      // Reset rendered scenario so renderPhone will re-draw
+      _renderedScenario = null;
+      renderPhone(events);
+    }
+  } catch(e) { /* server not yet up */ }
+}
+
+setInterval(poll, 500);
+poll();
+</script>
+</body>
+</html>
