@@ -10,6 +10,8 @@ AI agents are booking flights, reserving hotels, and moving money — on behalf 
 
 The payment credential doesn't get revoked after a bad transaction. **It never exists.**
 
+> Expedia is shipping an AI agent. So is Airbnb. So is every OTA. They can verify a human. They cannot verify an agent. We built the trust and identity layer for agentic booking — credential gated on intent, delegation cryptographically attenuated, human looped in at exactly the right moment. Expedia is our demo. Every lifestyle booking platform is the market.
+
 ---
 
 ## Why This Matters Now
