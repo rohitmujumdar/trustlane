@@ -304,9 +304,9 @@ The payment secret lives in a 1Password vault. It is resolved into memory **only
 | **S3** | **Unauthorized Bot** — Bot with no delegation token tries to mass-book 12 rooms | 10 | BLOCK | No identity, no delegation. Credential never exists. User sees: "Booking could not be completed." |
 
 The demo dashboard shows all three perspectives simultaneously:
-- **Left lane**: Platform ops view of inbound agent traffic
-- **Center**: What the end user sees on their device
-- **Right lane**: Platform ops view of outbound agent traffic
+- **Left lane**: Platform ops view — inbound agent traffic (what Expedia's trust & safety team sees)
+- **Center phone**: The end user's device — this is NOT part of TrustLane's UI. This is a user on Claude (or any AI assistant) asking it to book a trip. The user never sees trust scores or signal breakdowns. They see "your trip is booked" or "your agent tried to add something you didn't request — approve or reject?" TrustLane works invisibly between the user's agent and the platform.
+- **Right lane**: Platform ops view — outbound agent traffic (Expedia's own agent acting for users)
 
 ### Run It
 
