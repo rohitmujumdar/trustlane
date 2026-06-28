@@ -321,39 +321,64 @@ function toggle(headEl){
 function renderPhone(events){
   const chat=document.getElementById('phoneChat');
   if(!chat) return;
-  // classify scenario
-  const hasScore=events.some(e=>e.type==='score');
-  const hasAllow=events.some(e=>e.type==='score'&&(e.data||{}).decision==='ALLOW');
-  const hasBooking=events.some(e=>e.type==='booking');
-  const hasReview=events.some(e=>e.type==='blocked'&&(e.data||{}).decision==='REVIEW');
-  const hasBlock=events.some(e=>e.type==='blocked'&&(e.data||{}).decision==='BLOCK');
-  const scenario=!events.length?'empty':hasAllow&&hasBooking?'allow':hasReview?'review':hasBlock?'block':'empty';
-  const b=(cls,txt)=>`<div class="ph-bubble ${cls}">${txt}</div>`;
-  const pc=(icon,title,sub,extra='')=>`<div class="ph-card"><div class="pc-row">${icon} ${title}</div><div class="pc-sub">${sub}</div>${extra}</div>`;
-  if(scenario==='empty'){
+  if(!events.length){
     chat.innerHTML=`<div class="ph-empty"><div class="ph-ebox"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-4l-4 4-2-4z"/></svg></div><b>My Travel Agent</b><span>Hi! I'm your travel agent.<br>Tell me where you'd like to go.</span></div>`;
-  } else if(scenario==='allow'){
-    chat.innerHTML=[
-      b('user','Book me a Chicago trip, July 4 weekend, under $800'),
-      b('agent','Found great options! Here\'s what I booked:'),
-      pc('✈','United UA 2341 · JFK → ORD','Jul 4 · Economy · $412'),
-      pc('🏨','Marriott Downtown Chicago','3 nights · Jul 4–7 · $333'),
-      `<div class="ph-summary"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4L19 7"/></svg>Total: $745 / $800 · Payment processed securely</div>`
-    ].join('');
-  } else if(scenario==='review'){
-    chat.innerHTML=[
-      b('user','Book me a Chicago trip, July 4 weekend, under $800'),
-      b('agent','Found hotels in Chicago. Booking Marriott Downtown…'),
-      `<div class="ph-card amber" id="phReviewCard"><div class="pc-warn"><span>⚠</span>Action flagged for review</div><div style="font-size:11.5px;color:var(--ink);margin-bottom:4px">Your agent tried to add items you didn't request:</div><div class="pc-list"><span>• Travel insurance — $199</span><span>• Room upgrade — Premium Suite</span></div><div class="pc-btns" id="phBtns"><button class="ok" onclick="phApprove()">Approve</button><button class="no" onclick="phReject()">Reject</button></div></div>`
-    ].join('');
-  } else if(scenario==='block'){
-    chat.innerHTML=[
-      b('user','Book me 12 rooms in Chicago for my team'),
-      b('agent','Looking into that for you…'),
-      `<div class="ph-card amber" style="border-left-color:var(--red)"><div class="pc-warn" style="color:var(--red)"><span>✕</span>Booking could not be completed</div><div style="font-size:11.5px;color:var(--ink);margin-bottom:6px">Your agent was unable to complete this booking:</div><div class="pc-list"><span>• Agent could not verify its identity</span><span>• Amount ($4,200) exceeds your budget</span></div><div style="margin-top:8px;padding:8px 10px;background:var(--red-bg);border:1px solid #fca5a5;border-radius:8px;font-size:12px;font-weight:600;color:var(--red)">No payment was processed</div></div>`,
-      b('agent','I wasn\'t able to complete this booking — the request couldn\'t be verified. Please try again or contact support.')
-    ].join('');
+    return;
   }
+  const b=(cls,txt)=>`<div class="ph-bubble ${cls}">${txt}</div>`;
+  const pc=(icon,title,sub)=>`<div class="ph-card"><div class="pc-row">${icon} ${title}</div><div class="pc-sub">${sub}</div></div>`;
+  const html=[];
+  // Get user prompt from identity or agent_start detail
+  const identityEv=events.find(e=>e.type==='identity');
+  const startEv=events.find(e=>e.type==='agent_start');
+  const userPrompt=(startEv&&startEv.detail||'').replace(/^Agent.*?—\s*(processing:\s*)?/i,'').trim();
+  const scenarioTitle=(identityEv&&identityEv.title)||'';
+  // Show user message
+  if(userPrompt) html.push(b('user',userPrompt));
+  else if(scenarioTitle) html.push(b('user',scenarioTitle));
+  // Collect bookings, blocks, reviews from events
+  const bookings=[], reasonings=[];
+  let totalSpent=0, hasReview=false, hasBlock=false, reviewDetail='', blockDetail='';
+  for(const e of events){
+    const d=e.data||{};
+    if(e.type==='reasoning' && e.detail) reasonings.push(e.detail);
+    if(e.type==='booking'){
+      const amt=e.detail||'';
+      const match=amt.match(/\$(\d+)/);
+      const merchant=(amt.match(/at\s+(.+)/)||[])[1]||'';
+      const price=match?parseInt(match[1]):0;
+      totalSpent+=price;
+      bookings.push({merchant,price,detail:amt});
+    }
+    if(e.type==='blocked' && d.decision==='REVIEW'){hasReview=true; reviewDetail=e.detail||'';}
+    if(e.type==='blocked' && d.decision==='BLOCK'){hasBlock=true; blockDetail=e.detail||'';}
+  }
+  // Build phone view based on what happened
+  if(bookings.length>0){
+    // ALLOW path — show bookings
+    const lastReason=reasonings[reasonings.length-1]||'Here\'s what I booked:';
+    html.push(b('agent',lastReason.length>120?'Found great options! Here\'s what I booked:':lastReason));
+    for(const bk of bookings){
+      const icon=bk.merchant.match(/hotel|marriott|hyatt|inn|resort|plaza|grand|boutique|ocean|lakefront/i)?'🏨':'✈';
+      html.push(pc(icon,bk.merchant||'Booking confirmed','$'+bk.price));
+    }
+    const ck='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4L19 7"/></svg>';
+    html.push(`<div class="ph-summary">${ck}Total: $${totalSpent} · Payment processed securely</div>`);
+  } else if(hasReview){
+    html.push(b('agent','Found hotels. Booking in progress…'));
+    html.push(`<div class="ph-card amber" id="phReviewCard"><div class="pc-warn"><span>⚠</span>Action flagged for review</div><div style="font-size:11.5px;color:var(--ink);margin-bottom:4px">Your agent tried to add items you didn't request:</div><div class="pc-list"><span>• Travel insurance — $199</span><span>• Room upgrade — Premium Suite</span></div><div class="pc-btns" id="phBtns"><button class="ok" onclick="phApprove()">Approve</button><button class="no" onclick="phReject()">Reject</button></div></div>`);
+  } else if(hasBlock){
+    html.push(b('agent','Looking into that for you…'));
+    html.push(`<div class="ph-card amber" style="border-left-color:var(--red)"><div class="pc-warn" style="color:var(--red)"><span>✕</span>Booking could not be completed</div><div style="font-size:11.5px;color:var(--ink);margin-bottom:6px">Your agent was unable to complete this booking:</div><div class="pc-list"><span>• Agent could not verify its identity</span><span>• ${blockDetail||'Request was blocked'}</span></div><div style="margin-top:8px;padding:8px 10px;background:var(--red-bg);border:1px solid #fca5a5;border-radius:8px;font-size:12px;font-weight:600;color:var(--red)">No payment was processed</div></div>`);
+    html.push(b('agent','I wasn\'t able to complete this booking — the request couldn\'t be verified. Please try again or contact support.'));
+  } else if(reasonings.length>0){
+    // Still working — show typing/reasoning
+    const last=reasonings[reasonings.length-1];
+    html.push(b('agent',last));
+    html.push('<div class="ph-typing"><span></span><span></span><span></span></div>');
+  }
+  chat.innerHTML=html.join('');
+  chat.scrollTop=chat.scrollHeight;
 }
 function phApprove(){
   const btns=document.getElementById('phBtns');

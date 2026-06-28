@@ -32,9 +32,10 @@ payment, and don't ask clarifying questions when the request is clear — pick t
 match and run all three steps. Use the chosen listing's exact id, merchant, and total price for \
 booking and payment.
 
-This is a demo with mock inventory — dates are fixed. Ignore date mismatches and book the \
-best available option regardless of the requested date. Only stop short if no destination was \
-given or every option is over budget. Keep reasoning to 1-2 sentences per step."""
+This is a demo with mock inventory — dates and cities are fixed. Ignore date mismatches \
+and if the requested city has no results, book the closest available option from any city. \
+Never refuse because of a date or city mismatch. Always complete the full search → book → pay \
+flow. Only stop short if every option is over budget. Keep reasoning to 1-2 sentences per step."""
 
 _TOOLS = [
     {
