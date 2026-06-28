@@ -162,9 +162,12 @@ function buildCards(events){
       cards.push({type:'identity',accent:badge.accent,agent,sub:e.title,badge});
       cur=null;
     } else if(e.type==='agent_start'){
+      const isLLM=(d.agent_id||'').includes('llm');
       cur={type:'agent',agent_id:d.agent_id,agent_type:d.agent_type,hop:d.hop,
-        title:cap(d.agent_type)+' Agent',hopstr:'Hop '+d.hop+' · '+d.agent_type,
-        icon:ICON[d.agent_type]?d.agent_type:'booking',score:null,signals:null,accent:'green'};
+        title:isLLM?'LLM Agent':cap(d.agent_type)+' Agent',
+        hopstr:isLLM?'Claude · orchestrator':'Hop '+d.hop+' · '+d.agent_type,
+        icon:isLLM?'agent':(ICON[d.agent_type]?d.agent_type:'booking'),
+        score:null,signals:null,accent:isLLM?'blue':'green'};
       cards.push(cur);
     } else if(e.type==='reasoning'){
       if(!cur){cur={type:'agent',agent_id:d.agent_id,title:'Agent',hopstr:'',icon:'booking',score:null,accent:'green'};cards.push(cur);}
@@ -227,7 +230,8 @@ function cardHTML(c,idx){
       <span class="pill p-cred">No credential needed</span></div></div></div>`;
   }
   const pillCls=c.decision==='ALLOW'?'p-allow':c.decision==='REVIEW'?'p-review':'p-block';
-  const right=`<span class="pill ${pillCls}">${c.decision||''}</span>${c.score!=null?ring(c.score,acc):''}<span class="chev">${ICON.chev}</span>`;
+  const decisionPill=c.decision?`<span class="pill ${pillCls}">${c.decision}</span>`:'';
+  const right=`${decisionPill}${c.score!=null?ring(c.score,acc):''}<span class="chev">${ICON.chev}</span>`;
   let out='';
   if(c.cred){
     out=`<div class="cred"><div class="r1"><span style="color:${C.teal}">${ICON.cred}</span><b>Scoped credential</b>
