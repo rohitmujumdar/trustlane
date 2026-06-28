@@ -330,6 +330,28 @@ A bot with no delegation token tries to mass-book 12 rooms. Identity validity fa
 
 ![Scenario 3 — Unauthorized Bot](docs/05-unauthorized-bot.png)
 
+### Walkthrough
+
+**1. Idle — three scenarios, one engine.** The two-lane ops console with the user's device in the center.
+
+![Idle state](docs/screenshots/01-idle.png)
+
+**2. Clean Booking → ALLOW.** A delegated agent books a Chicago hotel: Search → Book (90) → Pay (80). Every signal passes, a scoped credential is issued and revoked, and the user's phone confirms the booking.
+
+![Clean booking allowed](docs/screenshots/02-clean-booking.png)
+
+**3. Injection Attack → REVIEW.** A poisoned listing tries to add $199 insurance and a room upgrade. Source, Scope and Budget fail → score 42 → credential withheld. The user's phone shows a human-approval prompt instead of a silent charge.
+
+![Injection flagged for review](docs/screenshots/03-injection-review.png)
+
+**4. Human in the loop.** If the user approves, payment proceeds with the flagged items. TrustLane surfaces the decision to the person rather than letting a hijacked agent act alone.
+
+![Injection approved by user](docs/screenshots/04-injection-approved.png)
+
+**5. Unauthorized Bot → BLOCK.** A bot with no delegation token tries to mass-book 12 rooms → score 10 → the credential never exists. The phone shows the booking couldn't be completed; no payment was processed.
+
+![Unauthorized bot blocked](docs/screenshots/05-bot-block.png)
+
 ### Run It
 
 ```bash
