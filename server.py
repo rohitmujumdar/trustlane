@@ -118,7 +118,8 @@ class Handler(BaseHTTPRequestHandler):
         self._send(404, b"not found", "text/plain")
 
 
-def main(port: int = 8077) -> None:
+def main(port: int = None) -> None:
+    port = port or int(os.environ.get("PORT", 8077))
     mode = "LIVE 1Password vault" if GATE.live else "mock vault (no token)"
     print(f"TrustLane console on http://localhost:{port}   [{mode}]")
     ThreadingHTTPServer(("0.0.0.0", port), Handler).serve_forever()
